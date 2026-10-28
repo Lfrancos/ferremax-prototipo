@@ -1,0 +1,181 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+  Tokens de color: fuente empresa\second-brain\04-Resources\Ferremax · Sistema de diseño.md (v1.1).
+  Copia para el prototipo: si el Sistema de diseño cambia, se cambia allá primero y se trae aquí.
+  No se editan aquí.
+*/
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Ferremax · claro */
+  --papel: #fafaf7;
+  --superficie: #ffffff;
+  --niebla: #e8e7e1;
+  --linea: #bdbcb4;
+  --tinta: #141413;
+  --grafito: #5c5b55;
+  --amarillo: #f4ea3a;
+  --sobre-amarillo: #141413;
+  --amarillo-suave: #fbf6c2;
+  --aprobado: #1b7340;
+  --aprobado-fondo: #e3f1e8;
+  --aviso: #a8520c;
+  --aviso-fondo: #fbebdd;
+  --vencido: #b3261e;
+  --vencido-fondo: #f9e2df;
+  --foco: #141413;
+
+  /* shadcn/ui, mapeado a los tokens de Ferremax */
+  --background: var(--papel);
+  --foreground: var(--tinta);
+  --card: var(--superficie);
+  --card-foreground: var(--tinta);
+  --popover: var(--superficie);
+  --popover-foreground: var(--tinta);
+  --primary: var(--tinta);
+  --primary-foreground: var(--papel);
+  --secondary: var(--niebla);
+  --secondary-foreground: var(--tinta);
+  --muted: var(--niebla);
+  --muted-foreground: var(--grafito);
+  --accent: var(--niebla);
+  --accent-foreground: var(--tinta);
+  --destructive: var(--vencido);
+  --border: var(--linea);
+  --input: var(--linea);
+  --ring: var(--foco);
+  --chart-1: var(--tinta);
+  --chart-2: var(--grafito);
+  --chart-3: var(--linea);
+  --chart-4: var(--linea);
+  --chart-5: var(--linea);
+  --radius: 0.25rem; /* radio-1: botones e inputs */
+}
+
+.dark {
+  /* Ferremax · oscuro */
+  --papel: #141413;
+  --superficie: #1e1e1c;
+  --niebla: #2a2a27;
+  --linea: #4a4a45;
+  --tinta: #f3f2ec;
+  --grafito: #a6a59d;
+  --amarillo: #f4ea3a;
+  --sobre-amarillo: #141413;
+  --amarillo-suave: #3a3714;
+  --aprobado: #5cc98a;
+  --aprobado-fondo: #17301f;
+  --aviso: #f29a4c;
+  --aviso-fondo: #3a2410;
+  --vencido: #f27d72;
+  --vencido-fondo: #3a1714;
+  --foco: #f3f2ec;
+}
+
+@theme inline {
+  --color-papel: var(--papel);
+  --color-superficie: var(--superficie);
+  --color-niebla: var(--niebla);
+  --color-linea: var(--linea);
+  --color-tinta: var(--tinta);
+  --color-grafito: var(--grafito);
+  --color-amarillo: var(--amarillo);
+  --color-sobre-amarillo: var(--sobre-amarillo);
+  --color-amarillo-suave: var(--amarillo-suave);
+  --color-aprobado: var(--aprobado);
+  --color-aprobado-fondo: var(--aprobado-fondo);
+  --color-aviso: var(--aviso);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-vencido: var(--vencido);
+  --color-vencido-fondo: var(--vencido-fondo);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-schibsted), Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), Consolas, monospace;
+  --font-heading: var(--font-schibsted), Arial, sans-serif;
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-size: 16px;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--foco);
+    outline-offset: 2px;
+  }
+}
+
+/* Escala del Sistema de diseño */
+@utility cifra {
+  font-size: 2.25rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+@utility titulo {
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+@utility subtitulo {
+  font-size: 1.25rem;
+  line-height: 1.625rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+@utility etiqueta {
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+@utility dato {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
