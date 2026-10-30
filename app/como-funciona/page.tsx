@@ -15,11 +15,11 @@ const OPCIONES = [
   {
     letra: "A",
     titulo: "Satélite: SAP sigue siendo la puerta de entrada",
-    como: "El vendedor registra el pedido en SAP, como hoy. Cada día se descarga de SAP el archivo de solicitudes y se importa aquí. La herramienta solo cuida aprobar, alistar y la revisión del lunes.",
+    como: "El vendedor registra el pedido en SAP, como hoy. Cada día se suben aquí tres archivos de SAP (clientes, pedidos y cartera), se aprueba en la app y las decisiones vuelven a SAP en un archivo exportado. La herramienta cuida aprobar, alistar y la revisión del lunes.",
     reglas: ["PER-5", "CRED-1.1"],
     filas: [
-      ["Quién", "El vendedor en SAP. Marcela o Sandra importan el archivo."],
-      ["Qué cambia", "Nada en SAP. Se agrega un archivo diario."],
+      ["Quién", "El vendedor en SAP. Marcela o Sandra cargan los archivos y exportan las decisiones."],
+      ["Qué cambia", "Nada en SAP. Entran tres archivos al día y sale uno de vuelta, con el formato de aprobaciones de SAP."],
       ["Para discutir", "La solicitud llega a la herramienta cuando se importa; el reloj cuenta desde SAP, así que ese rato ya es espera. Qué reporte de SAP saca el archivo: [por definir]."],
     ],
   },

@@ -46,7 +46,7 @@ export function DescargaApartadas({ carga }: { carga: Carga }) {
 const EQUIVALENTE = [
   ["Tabla clientes (llave id_cliente)", "tabla `clientes`, llave primaria id_cliente"],
   ["Tabla pedidos (llave id_pedido)", "tabla `pedidos`, referencia a clientes"],
-  ["Tabla aprobaciones (llave id_pedido)", "tabla `aprobaciones`, referencia a pedidos"],
+  ["Las decisiones (eventos de cada pedido) y los lotes EXP-…", "tabla `decisiones`, la que se exporta a SAP con el formato de aprobaciones, y tabla `exportaciones` (quién, cuándo, qué pedidos)"],
   ["Tabla cartera (llave id_factura)", "tabla `cartera_facturas`, referencia a clientes y pedidos"],
   ["`versiones` de cada fila", "tabla de historia: una fila por cada valor anterior, con la carga que lo trajo"],
   ["`crudo` de cada fila", "columna JSON con la fila tal como llegó, también las columnas que la app no usa"],

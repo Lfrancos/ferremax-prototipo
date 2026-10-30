@@ -8,7 +8,7 @@ import { destinoDe, type Decisiones, type FilaRevisada, type Revision } from "./
 //   · los pedidos a crédito que aún no tienen aprobación son solicitudes por aprobar;
 //   · una aprobación que SAP ya trae para un pedido que la app tenía por aprobar se registra como decisión;
 //   · la cartera cargada es el corte con el que se calculan saldo y atraso.
-// Lo demás (el histórico de pedidos, aprobaciones y facturas pagadas) queda solo en la base.
+// Lo demás (el histórico de pedidos y las facturas pagadas) queda solo en la base.
 
 export interface ContextoCarga {
   fecha: FechaHora
@@ -91,7 +91,6 @@ export function aplicarCarga(base: Base, revision: Revision, dec: Decisiones, ct
   const tablas: Record<TablaId, Record<string, Fila>> = {
     clientes: { ...base.tablas.clientes },
     pedidos: { ...base.tablas.pedidos },
-    aprobaciones: { ...base.tablas.aprobaciones },
     cartera: { ...base.tablas.cartera },
   }
   const apartadas: Apartada[] = []

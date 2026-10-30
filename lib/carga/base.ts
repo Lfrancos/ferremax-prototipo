@@ -5,7 +5,7 @@ import type { TablaId, Valores } from "./esquema"
 //   · cada fila guarda sus valores ya leídos (`v`) y la fila tal como llegó (`crudo`), con todas sus columnas;
 //   · cuando una fila se actualiza, la versión anterior queda en `versiones`;
 //   · lo que no se carga (errores, dudas) queda en la carga como "apartada", con su motivo, para corregirlo y volver a subir.
-// En la app real esto son cuatro tablas, una tabla de cargas y una de filas apartadas. Aquí es un objeto en memoria.
+// En la app real esto son tres tablas, una tabla de cargas y una de filas apartadas. Aquí es un objeto en memoria.
 
 export interface Version {
   v: Valores
@@ -65,7 +65,7 @@ export interface Base {
 export const CARGA_DEMO = "CARGA-000"
 export const CARGA_MANUAL = "MANUAL"
 
-const vacia = (): Base => ({ tablas: { clientes: {}, pedidos: {}, aprobaciones: {}, cartera: {} }, cargas: [] })
+const vacia = (): Base => ({ tablas: { clientes: {}, pedidos: {}, cartera: {} }, cargas: [] })
 
 /** El maestro de clientes como fila de la tabla `clientes`. */
 export function filaDeCliente(c: Cliente, carga: string, linea = 0): Fila {
@@ -124,6 +124,5 @@ export function baseInicial(clientes: Cliente[]): Base {
 export const contarFilas = (base: Base): Record<TablaId, number> => ({
   clientes: Object.keys(base.tablas.clientes).length,
   pedidos: Object.keys(base.tablas.pedidos).length,
-  aprobaciones: Object.keys(base.tablas.aprobaciones).length,
   cartera: Object.keys(base.tablas.cartera).length,
 })

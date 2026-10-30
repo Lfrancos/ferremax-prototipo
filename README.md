@@ -18,18 +18,19 @@ Abre http://localhost:3000. Si el puerto está ocupado, Next usa el siguiente (3
 
 ## Mapa de pantallas
 
-El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Cargar pedidos, Tablero de pedidos, Bodega, Transporte) · **Seguimiento** (Alertas, **Avisos por WhatsApp**, Revisión del lunes) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
+El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Tablero de pedidos y los cuatro pasos del pedido: **1 · Cargar pedidos**, **2 · Aprobar** con la cuenta de lo que espera decisión, **3 · Bodega**, **4 · Transporte**) · **Seguimiento** (Alertas, **Avisos por WhatsApp**, Revisión del lunes) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
 
 | Ruta | Momento | Qué muestra |
 |---|---|---|
 | `/como-funciona` | Los 8 | Abre la presentación. Primero, "Antes del momento 1": las dos opciones para que entre la solicitud. Después, los 6 momentos hasta la salida de bodega con su tipo, quién decide, sus reglas y dónde viven, y los dos topes. Al final, el transporte (momentos 7 y 8). |
-| `/solicitudes` (menú: **Cargar pedidos**) | Antes del 1 | Los pedidos entran subiendo los cuatro archivos CSV de SAP (clientes, pedidos, aprobaciones, cartera). Tres pestañas: **Subir los archivos CSV** (qué trae cada archivo, subir, revisar con recomendaciones y guardar), **Lo que hay en la base** (filas por tabla, cargas hechas, historia de cada fila) y **Crear un pedido a mano** (opción B: el vendedor crea la solicitud y ve quién la aprueba, qué fecha puede prometer y la carga de bodega). |
+| `/solicitudes` (menú: **1 · Cargar pedidos**) | Antes del 1 | Paso 1: los pedidos entran subiendo los tres archivos CSV de SAP (clientes, pedidos y cartera). Tres pestañas: **Subir los archivos CSV** (qué trae cada archivo, subir, revisar con recomendaciones y guardar), **Lo que hay en la base** (filas por tabla, cargas hechas, historia de cada fila) y **Crear un pedido a mano** (opción B: el vendedor crea la solicitud y ve quién la aprueba, qué fecha puede prometer y la carga de bodega). |
+| `/aprobar` (menú: **2 · Aprobar**) | 1 a 3 | Paso 2: los pedidos por aprobar (quién aprueba, cuánto llevan esperando y el botón **Aprobar**) y, debajo, lo ya decidido que falta pasar a SAP, con el botón que descarga el archivo para SAP y los archivos ya descargados. |
 | `/` | Todos | Tablero: 5 tarjetas (incluye **En camino**) que **filtran la tabla** al pulsarlas (Por aprobar, Cerca del tope, Fuera de tope, En camino; "% a tiempo" abre la revisión), un gráfico de pedidos abiertos por día y la tabla de pedidos con pestañas por tramo (Aprobar, Alistar y despachar, **En camino**, Cerrados) y por tope (Cerca del tope, Fuera de tope), con una columna **Tiempo total**. Cada fila tiene una flecha que despliega su historial y el botón **Aprobar** cuando la regla deja firmar al rol. |
 | `/clientes` | 1 | Base de clientes (maestro de SAP). Sandra crea clientes; Nelson y los vendedores ven solo los nombres. |
 | `/cartera` | 1, 2, 5 | Informe de cartera: el corte vigente, cuándo cruza cada cliente los 30 días de atraso, los pagos sin aplicar, el importador del corte de SAP con vista previa de lo que cambia, y las partidas abiertas. |
 | `/pedidos/[id]` | 1 a 8 | Quién aprueba y por qué, ficha de cinco líneas, nota de contexto (propuesta IA), firma, paso a bodega, historial y, desde que sale de bodega, **5 · Transporte y entrega**: lo cargado contra lo pedido, el conductor, las fotos que llegaron y lo que leyó Claude. |
-| `/bodega` | 4 y 7 | Lista de alistamiento de mañana (vista de Nelson), en el orden de la regla y con fecha límite. Cada fila tiene el botón **Entregar a transporte** (solo Nelson). |
-| `/transporte` | 7 y 8 | Qué va en camino, qué salió incompleto, qué entregas tienen alerta y cuáles están confirmadas. Las dos opciones para que llegue la evidencia (chat de WhatsApp o enlace por entrega), con una simulación de lo que manda el conductor. |
+| `/bodega` (menú: **3 · Bodega**) | 4 y 7 | Paso 3: lista de alistamiento de mañana (vista de Nelson), en el orden de la regla y con fecha límite. Cada fila tiene el botón **Entregar a transporte** (solo Nelson). |
+| `/transporte` (menú: **4 · Transporte**) | 7 y 8 | Paso 4: qué va en camino, qué salió incompleto, qué entregas tienen alerta y cuáles están confirmadas. Las dos opciones para que llegue la evidencia (chat de WhatsApp o enlace por entrega), con una simulación de lo que manda el conductor. |
 | `/remisiones/[id]` | 4, 7 y 8 | La remisión de un pedido como se vería, las fotos firmadas que subió el conductor y **qué pasó con ella**: cuándo la generó SAP, cuándo entró a la lista, quién la entregó a transporte, cuándo llegó la foto firmada y qué leyó Claude. Se llega desde la ficha, el tablero (fila desplegada), Bodega y Transporte. |
 | `/facturas/[id]` | Después de 8 | La factura como se vería y **qué pasó con ella**: quién la emitió, firma electrónica, DIAN, envío, acuse del cliente, corte de cartera y vencimiento. Se llega desde la ficha, el tablero y `/cartera`. |
 | `/avisos` | 1, 3 y 5 | **Avisos por WhatsApp (simulados).** Cuándo avisa el sistema (al entrar y cada 6 h), qué pedidos esperan decisión y cuándo les toca el próximo aviso, con un **reloj de ensayo** (+1 h, +6 h, +12 h) para ver los recordatorios. Un celular simulado por aprobador (Andrés, Marcela, Sandra) donde se responde `1 Aprobar`, `2 Rechazar` o `3 Info` más el motivo, y la decisión queda en el pedido. |
@@ -51,7 +52,7 @@ El rol se cambia abajo en el sidebar ("Ver como"). No es un login: cambia qué s
 | Nelson | Solo nombres de clientes; sin montos, cupos, saldos, atrasos ni motivos de crédito | Editar la Regla de prioridad de alistamiento. **Entregar a transporte** y atender las alertas de entrega. | `/bodega` |
 | Édinson Rojas (vendedor) | Igual que Nelson | Crear solicitudes en la app (opción B). | `/solicitudes` |
 
-Marcela y Sandra también importan el archivo de SAP (opción A). Marcela también atiende las alertas de entrega.
+Marcela y Sandra también cargan los archivos de SAP y descargan el archivo de decisiones para SAP (opción A). Marcela también atiende las alertas de entrega.
 
 Estos permisos también son reglas, en el área Sistema:
 
@@ -59,7 +60,7 @@ Estos permisos también son reglas, en el área Sistema:
 - `PER-2`: quién crea clientes.
 - `PER-3`: quién edita una regla. Sale de "Reglas del sistema · dónde viven las reglas": solo el dueño del documento lo edita.
 - `PER-4`: quién firma y quién pide el dato. Sale de la tabla de la Política.
-- `PER-5`: quién carga los archivos de SAP.
+- `PER-5`: quién carga los archivos de SAP y exporta las decisiones.
 - `PER-6`: quién crea una solicitud en la app.
 - `PER-8`: quién entrega a transporte (Nelson) y quién atiende las alertas de entrega (Nelson y Marcela).
 
@@ -80,16 +81,29 @@ El saldo y el atraso ya no se escriben en el cliente: se calculan sobre las **pa
 
 En las dos, apenas entra la solicitud, la regla CRED-1.1 dice quién la aprueba y arranca el reloj de 24 h.
 
-**Opción A · Satélite: se suben los cuatro archivos de SAP.** SAP sigue siendo la puerta de entrada. En `/solicitudes` se suben (juntos y en cualquier orden) los CSV con las columnas de la sesión 9: `clientes` (llave `id_cliente`), `pedidos` (`id_pedido`), `aprobaciones` (`id_pedido`) y `cartera` (`id_factura`). Las columnas, con tipo, si son obligatorias y un ejemplo, salen de `lib/carga/esquema.ts`, que es lo que en una base real serían las tablas.
+**Opción A · Satélite: entran tres archivos de SAP y sale uno.** SAP sigue siendo la puerta de entrada y donde queda la aprobación; todo el flujo pasa en la app. El pedido tiene **cuatro pasos**, con el mismo nombre en el menú, en el título de cada pantalla y en la franja de pasos que va arriba de cada una (y del tablero):
+
+1. **Cargar pedidos** (`/solicitudes`): se suben los 3 archivos de SAP. Marcela o Sandra. *Luego:* avisa por WhatsApp a quien aprueba.
+2. **Aprobar** (`/aprobar`): se aprueba o se rechaza (aquí, en la ficha o respondiendo el WhatsApp). Andrés, Marcela o Sandra. *Luego:* se pasa a SAP con un archivo.
+3. **Bodega** (`/bodega`): se alista y sale. Nelson.
+4. **Transporte** (`/transporte`): llega a la obra con el documento firmado.
+
+El aviso por WhatsApp y el paso a SAP no son pasos: son lo que conecta un paso con el siguiente. Por eso `/avisos` está en Seguimiento y el archivo para SAP se descarga en el paso 2.
+
+Por qué tres y no cuatro: el archivo de aprobaciones de SAP es una copia de tres columnas de pedidos (`solicitud_credito_at`, `aprobacion_credito_at`, `aprobo`): en los datos de la sesión 9 las 2.088 filas son iguales, y lo que agrega (horas de espera, día de la semana, resultado) se calcula. Además, la aprobación ahora se da en la app, así que ese archivo pasa a ser lo que **sale**: `/aprobar` lo arma con las mismas columnas (`lib/exportar-sap.ts`). Si alguien lo sube, la revisión lo reconoce y dice que ya no se sube.
+
+En `/solicitudes` se suben (juntos y en cualquier orden) los CSV con las columnas de la sesión 9: `clientes` (llave `id_cliente`), `pedidos` (`id_pedido`) y `cartera` (`id_factura`). Las columnas, con tipo, si son obligatorias y un ejemplo, salen de `lib/carga/esquema.ts`, que es lo que en una base real serían las tablas.
 
 Cómo se carga, en tres pasos y sin perder ningún dato:
 1. **Revisar (no guarda nada).** Cada archivo se lee y se dice si se puede: si es un Excel en vez de un CSV, si está vacío o no se reconoce, si faltan columnas obligatorias, si trae columnas que no conoce (se guardan sin usarlas), si el separador es `;`, si los caracteres vienen dañados, si las fechas vienen como día/mes/año. Cada fila se lee con su tipo (números con puntos o comas, fechas con segundos, listas como segmento o forma de pago) y se revisa entre columnas: pagado + saldo = valor de la factura, días de mora contra vencimiento y corte, margen, fechas en orden, referencias rotas (un pedido de un cliente que no existe). Entre archivos: que sean del mismo corte y que los valores coincidan.
 2. **Decidir con recomendación.** Cada fila queda en **una sola clase**, así que las cuentas siempre cuadran con las filas del archivo: *nueva*, *ya estaba* (idéntica, no se duplica), *con datos nuevos* (cambió un saldo, un estado…: se recomienda actualizar), *dato que no debería cambiar* (cambió un valor facturado, un NIT o una fecha de origen: se recomienda dejarla y preguntar en SAP), *posible duplicado* (llave nueva pero mismo NIT o nombre de cliente, o mismo cliente + fecha + valor de pedido: se recomienda no cargar), *llave repetida con datos distintos dentro del archivo* y *con error*. Cada grupo muestra qué pasó, las opciones y por qué se recomienda una.
 3. **Guardar.** Solo Marcela o Sandra (`PER-5`). Lo nuevo entra; lo actualizado guarda la versión anterior en el historial de la fila; lo que no se carga queda **apartado con su motivo** y se puede descargar como CSV para corregirlo en SAP y volver a subir (lo que ya estaba no se duplica). Cada carga guarda quién, cuándo, la huella de cada archivo (si se sube el mismo otra vez, se avisa) y cuántas filas hizo de cada tipo.
 
-Qué le llega al flujo de aprobación: los **pedidos a crédito con solicitud y sin aprobación** son solicitudes por aprobar (entran con su aprobador, su reloj y su aviso por WhatsApp); si SAP ya trae la aprobación de uno que la app tenía por aprobar, se registra como «por SAP»; la **cartera** cargada pasa a ser el corte de las fichas (saldo y atraso, `CART-1` a `CART-5`), conservando los pagos sin aplicar del corte anterior; los clientes son los de la base. Los pedidos y aprobaciones históricos solo se guardan.
+Qué le llega al flujo de aprobación: los **pedidos a crédito con solicitud y sin aprobación** son solicitudes por aprobar (entran con su aprobador, su reloj y su aviso por WhatsApp); si SAP ya trae la aprobación de uno que la app tenía por aprobar, se registra como «por SAP»; la **cartera** cargada pasa a ser el corte de las fichas (saldo y atraso, `CART-1` a `CART-5`), conservando los pagos sin aplicar del corte anterior; los clientes son los de la base. Los pedidos históricos solo se guardan.
 
-Cómo ensayarlo sin los archivos: tres juegos de ejemplo. **Primer día** (limpio, con una solicitud sin valor), guárdalo; luego **Día siguiente** (repetidos, cambios, un valor que no debería cambiar, un NIT repetido, una fecha que no existe, una llave dos veces y una suma que no cuadra); y **Archivos con problemas** (sin una columna, de otro sistema, con la codificación dañada). Con los CSV reales de `datos/01_Primero_Aprobacion`: 134 clientes (19 ya estaban), 2.519 pedidos, 2.088 aprobaciones y 1.855 facturas entran sin errores, y una segunda subida del mismo archivo no duplica nada. La lógica está en `lib/carga/` (sin React, la misma que correría un script en el servidor).
+La vuelta a SAP (en `/aprobar`, bloque **Por pasar a SAP**): cada decisión tomada en la app (botón o WhatsApp) queda por pasar a SAP. Al descargar el archivo se arma un lote (`EXP-001`, `EXP-002`…) y se descarga `aprobaciones_para_SAP_EXP-001.csv` con `id_pedido`, `solicitud_at`, `decision_at`, `aprobador`, `horas_espera`, `dia_solicitud`, `valor_pedido_cop` y `resultado` (Aprobado o Rechazado). Lo exportado no vuelve a salir; un lote se puede volver a descargar. Las decisiones que ya venían de SAP no se exportan. En la demo, lo decidido hasta el viernes 27 a las 6 p. m. ya está en `EXP-000`; lo del fin de semana y de hoy está pendiente.
+
+Cómo ensayarlo sin los archivos: tres juegos de ejemplo. **Primer día** (limpio, con una solicitud sin valor), guárdalo; luego **Día siguiente** (repetidos, cambios, un valor que no debería cambiar, un NIT repetido, una fecha que no existe, una llave dos veces y una suma que no cuadra); y **Archivos con problemas** (sin una columna, de otro sistema, con la codificación dañada y el de aprobaciones, que ya no se sube). Con los CSV reales de `datos/01_Primero_Aprobacion`: 134 clientes (19 ya estaban, porque la demostración arranca con 19 clientes con sus mismos códigos), 2.519 pedidos y 1.855 facturas entran sin errores, y una segunda subida del mismo archivo no duplica nada. La lógica está en `lib/carga/` (sin React, la misma que correría un script en el servidor).
 
 **Opción B · Solución completa.** El vendedor crea la solicitud en la app. Mientras la llena ve tres cosas:
 - Quién la aprueba (CRED-1.1). Sin el porqué, que es información de crédito.
@@ -159,7 +173,8 @@ Lo que ya está escrito y se reutiliza igual, sin React ni estado: `lib/rules.ts
 | `lib/store.tsx` guarda todo en memoria | Base de datos: clientes, pedidos con sus eventos, partidas de cartera, mensajes de WhatsApp, cambios de reglas |
 | Los avisos se recalculan al pintar la pantalla | Un proceso que corre cada minuto llama a `avisosDe`, manda lo que falta por Baileys y **guarda lo enviado** para no repetir |
 | El celular simulado de `/avisos` | El evento de mensaje recibido de Baileys: se acepta solo de los celulares registrados, el mensaje citado dice de qué pedido es y se lee con `resolverRespuesta` |
-| Los cuatro CSV se leen y revisan en el navegador y la base vive en memoria (`lib/carga`) | El mismo código en un script o ruta del servidor, contra tablas reales: `INSERT` de lo nuevo, `UPDATE` con fila de historia, y el archivo original guardado |
+| Los tres CSV se leen y revisan en el navegador y la base vive en memoria (`lib/carga`) | El mismo código en un script o ruta del servidor, contra tablas reales: `INSERT` de lo nuevo, `UPDATE` con fila de historia, y el archivo original guardado |
+| El archivo para SAP se descarga y se pasa a mano (`lib/exportar-sap.ts`) | El mismo archivo, que SAP lee con un programa de carga, o la liberación directa por integración. Los lotes, en una tabla `exportaciones` |
 | `HOY` fijo | La hora real |
 
 Baileys no es una API oficial de WhatsApp (funciona como WhatsApp Web) y Meta puede bloquear un número que lo use; la alternativa oficial es WhatsApp Business. Es una decisión para los mentores.
@@ -172,7 +187,8 @@ lib/rules.ts       TODAS las reglas, una vez: id, texto, área, fuente, document
 lib/vistas.ts      Vistas calculadas: pedido + cliente, tramo, relojes, lista de bodega, alertas, revisión, gráfico
 lib/store.tsx      Estado de la sesión: arranca con data.ts y solo agrega eventos, clientes y cambios de reglas
 lib/propuestas.ts  Textos de "Propuesta IA" armados con plantillas. No deciden nada
-lib/carga/         Carga de los cuatro archivos de SAP: esquema (las tablas), csv, revisar (clases, decisiones y recomendaciones), aplicar (guarda y arma lo que le sirve al flujo), base (filas con historia) y ejemplo
+lib/carga/         Carga de los tres archivos de SAP: esquema (las tablas), csv, revisar (clases, decisiones y recomendaciones), aplicar (guarda y arma lo que le sirve al flujo), base (filas con historia) y ejemplo
+lib/exportar-sap.ts  De vuelta a SAP: las decisiones de la app en el formato de aprobaciones de SAP, por lotes
 lib/importar.ts    Lectura simple de CSV y descarga, para el importador de cartera
 lib/importar-cartera.ts  Corte de cartera: columnas, lectura y revisión de las partidas abiertas
 lib/notificaciones.ts  Avisos por WhatsApp: a quién, cuándo, qué texto y cómo se lee la respuesta (sin enviar nada)
@@ -221,7 +237,7 @@ Ningún documento lo dice, así que el prototipo no lo inventa:
 9. **Dueño de los permisos PER-1 y PER-2** (quién ve qué y quién crea clientes). Salen del pedido para esta demo, no de un documento.
 10. **"Lead del área".** Ningún documento nombra un líder por área. El prototipo usa al dueño del documento de cada regla, que es quien "Reglas del sistema" deja editar. Un área puede tener varios dueños; en Crédito son Andrés y Marcela.
 11. **Editar el texto de una regla.** El prototipo solo deja cambiar sus números. El texto se cambia en el documento, como dice "Reglas del sistema".
-12. **Opción A:** qué reporte o transacción de SAP saca cada uno de los cuatro archivos, cada cuánto y quién los carga. El prototipo deja guardar a Marcela y Sandra.
+12. **Opción A:** qué reporte o transacción de SAP saca cada uno de los tres archivos, cada cuánto y quién los carga. El prototipo deja guardar a Marcela y Sandra.
 13. **Opción B:** cómo llega después a SAP un pedido creado en la app (doble digitación o integración), y qué número le da SAP.
 14. **Vendedores:** si solo crean solicitudes de sus propios clientes y si deben ver información de crédito. El prototipo los deja crear para cualquier cliente y no les muestra crédito.
 15. **Capacidad de bodega:** 18 pedidos por día es un dato de Nelson en `S6_Capacidad`, un dataset que está en revisión. No está en ninguna regla escrita.
@@ -252,13 +268,17 @@ Ningún documento lo dice, así que el prototipo no lo inventa:
 40. **Avisos · quién escribe:** número de WhatsApp de Ferremax, su costo y quién lo paga; si se usa Baileys o la API oficial; qué hace el sistema con un mensaje de un número que no es de un aprobador.
 41. **Ficha de decisión:** la Política dice cinco líneas (`CRED-2.6`); la del ejemplo de la sesión 9 suma cupo disponible, saldo vencido y condición. El prototipo muestra las cinco más tres. La frase "revisar si procede una excepción, un pago previo o un ajuste de condiciones" no está en ninguna regla.
 42. **Prioridad de bodega:** dónde se anota que Marcela adelantó un pedido porque la obra está parada, y qué pasa con el orden cuando ella lo hace (`BOD-3.2`).
-43. **Cargar pedidos:** se cargan cuatro archivos. Faltan el detalle por línea (`pedido_lineas`), productos, inventario y reclamos (la recomendación de la sesión 9 es sumarlos después) y las reglas (el archivo `reglas_aprobacion` es **POR VALIDAR** y las reglas viven en `lib/rules.ts`).
+43. **Cargar pedidos:** se cargan tres archivos. Faltan el detalle por línea (`pedido_lineas`), productos, inventario y reclamos (la recomendación de la sesión 9 es sumarlos después) y las reglas (el archivo `reglas_aprobacion` es **POR VALIDAR** y las reglas viven en `lib/rules.ts`).
 44. **Carga · qué es "dato que no debería cambiar":** el prototipo marca como fijos la llave, el NIT, el cliente y las fechas de origen de cada fila y el valor de un pedido o de una factura. Hay que confirmar la lista con Sandra, y si un pedido puede cambiar de valor antes de aprobarse.
 45. **Carga · cartera:** el archivo es una foto completa del corte. Hoy lo cargado reemplaza el corte de las fichas, pero **no borra** de la base las facturas que ya no aparecen. No está definido qué hacer con ellas (¿pagadas? ¿anuladas?) ni cuántos días puede tener un corte antes de usarse.
 46. **Carga · cuándo se sube:** si el archivo de pedidos es diario o de la semana, y si los de una misma foto de SAP traen siempre el mismo corte. La revisión avisa si no coinciden (más de 3 días).
 47. **Carga · lo apartado:** quién lo corrige y en dónde. Hoy se descarga con el motivo y se corrige a mano en SAP. En la app real habría una cola de pendientes con dueño.
 48. **Carga · pedidos cancelados o cambiados en SAP:** si SAP cancela un pedido que la app tiene por aprobar, la app no tiene un estado "cancelado" y no lo detiene: solo se guarda en la base.
 49. **Carga · decisiones por grupo:** las decisiones (actualizar, dejar, cargar) se toman por grupo y no fila por fila. Si hace falta decidir una por una, es un cambio de pantalla, no de lógica.
+50. **Paso a SAP · cómo entra:** qué transacción o programa recibe el archivo, o si se libera a mano cada pedido con el archivo a la mano. Quién lo hace y cada cuánto (el prototipo deja descargarlo a Marcela y Sandra, cuando quieran).
+51. **Paso a SAP · rechazos:** qué hace SAP con un pedido rechazado en la app: ¿se cancela o se queda bloqueado? El archivo dice "Rechazado", un valor que el archivo de aprobaciones de SAP no traía (traía "Sin aprobar (cancelado)").
+52. **Paso a SAP · confirmación:** hoy la app no revisa que SAP haya recibido lo exportado. La siguiente carga de pedidos trae la aprobación y quién aprobó; con eso se podría marcar cada pedido como "confirmado en SAP" y avisar de lo exportado que SAP no tiene después de X horas.
+53. **Dos numeraciones:** `/como-funciona` cuenta 8 *momentos* (los del método del curso) y el menú cuenta 4 *pasos*. Falta decidir si se deja una sola.
 
 ## Supuestos de la demo
 

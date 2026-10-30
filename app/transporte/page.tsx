@@ -5,6 +5,7 @@ import { BotonAtender } from "@/components/ferremax/atender"
 import { Estado } from "@/components/ferremax/estado"
 import { ReglaBoton } from "@/components/ferremax/insignia"
 import { MensajeTarjeta } from "@/components/ferremax/mensaje"
+import { PasosPedido } from "@/components/ferremax/pasos"
 import { Bloque, Titulo } from "@/components/ferremax/piezas"
 import { SimularMensaje } from "@/components/ferremax/simular-mensaje"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -45,10 +46,11 @@ export default function Transporte() {
   return (
     <>
       <Titulo
-        indice="(008) Transporte"
+        indice="Paso 4 · Transporte"
         titulo="Qué va en camino y qué ya se entregó"
         bajada={`Desde que Nelson lo entrega a transporte hasta que llega la foto del documento firmado · Corte: ${fmtFechaHora(HOY)}`}
       />
+      <PasosPedido paso={4} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Cifra rotulo="En camino" valor={t.enCamino.length} pie={`${t.sinConfirmar.length} sin confirmar (más de ${aviso} h)`} />

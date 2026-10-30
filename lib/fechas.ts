@@ -88,6 +88,9 @@ function horaTexto(h: number, mi: number) {
   return `${h12}:${String(mi).padStart(2, "0")} ${sufijo}`
 }
 
+/** "lunes" */
+export const nombreDia = (f: FechaHora) => DIAS_LARGO[diaDeSemana(f)]
+
 /** "lun 30 nov" */
 export function fmtDia(f: FechaHora) {
   const p = partes(f)

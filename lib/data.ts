@@ -24,6 +24,9 @@ import type {
 /** Fecha de hoy fija de demo, para que el semáforo no cambie entre ensayos. Es lunes. */
 export const HOY: FechaHora = "2026-11-30T09:00"
 
+/** La última vez que se pasaron decisiones a SAP antes de la demo (lote EXP-000): el viernes por la tarde. */
+export const ULTIMA_EXPORTACION: FechaHora = "2026-11-27T18:00"
+
 /** El maestro de SAP tiene 134 clientes (Diccionario de datos): los nuevos siguen desde ahí. */
 export const ULTIMO_ID_SAP = 134
 

@@ -2,25 +2,27 @@
 
 import { BaseDatos } from "@/components/ferremax/base-datos"
 import { CargarArchivos } from "@/components/ferremax/cargar-archivos"
+import { PasosPedido } from "@/components/ferremax/pasos"
 import { CrearSolicitud } from "@/components/ferremax/crear-solicitud"
 import { Titulo } from "@/components/ferremax/piezas"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CREAR_SOLICITUD } from "@/lib/rules"
 import { usePrototipo } from "@/lib/store"
 
-// Antes del momento 1: por dónde entra la solicitud. Se suben los cuatro archivos de SAP, se revisan y se guardan en la base;
-// los pedidos a crédito sin aprobar son las solicitudes por aprobar. En los dos caminos, la regla del momento 1
-// (CRED-1.1) dice quién aprueba apenas entra.
+// Paso 1 · Cargar pedidos: se suben los tres archivos de SAP (clientes, pedidos, cartera), se revisan y se guardan en la base;
+// los pedidos a crédito sin aprobar pasan al paso 2 (/aprobar), desde donde la decisión vuelve a SAP.
+// En los dos caminos, la regla del momento 1 (CRED-1.1) dice quién aprueba apenas entra.
 
 export default function Solicitudes() {
   const { rol } = usePrototipo()
   return (
     <>
       <Titulo
-        indice="(000) Cargar pedidos"
-        titulo="Los pedidos entran subiendo los archivos de SAP"
-        bajada="Subes los cuatro archivos CSV de SAP (clientes, pedidos, aprobaciones y cartera). La app los revisa antes de guardar, te avisa de lo que viene raro o repetido y te recomienda qué hacer. Los pedidos a crédito sin aprobar quedan por aprobar y a quien los aprueba le llega el aviso por WhatsApp."
+        indice="Paso 1 · Cargar pedidos"
+        titulo="Cargar pedidos: los 3 archivos de SAP"
+        bajada="Subes los archivos de clientes, pedidos y cartera. La app los revisa antes de guardar y te recomienda qué hacer con lo raro o repetido. Los pedidos a crédito sin aprobar pasan a 2 · Aprobar y a quien los aprueba le llega el aviso por WhatsApp."
       />
+      <PasosPedido paso={1} />
       {/* key={rol}: al cambiar de rol se abre la pestaña de ese rol */}
       <Tabs key={rol} defaultValue={CREAR_SOLICITUD.fn(rol) ? "crear" : "subir"} className="gap-6">
         <TabsList className="h-auto flex-wrap">

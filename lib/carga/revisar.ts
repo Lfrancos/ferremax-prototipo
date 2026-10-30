@@ -1,3 +1,4 @@
+import { COLUMNAS_SAP } from "../exportar-sap"
 import { diasCalendario, soloFecha } from "../fechas"
 import type { FechaHora } from "../tipos"
 import type { Base, Fila } from "./base"
@@ -63,6 +64,8 @@ export interface RevisionArchivo {
   conteo: Record<Clase, number>
   /** Si es el mismo archivo de una carga anterior. */
   yaCargado?: { id: string; fecha: FechaHora }
+  /** Es el archivo de aprobaciones de SAP: se reconoce, pero ya no se sube (sale de la app hacia SAP). */
+  yaNoSeSube?: boolean
 }
 
 export interface Revision {
@@ -241,11 +244,6 @@ function cruces(tabla: Tabla, v: Valores, vista: Vista): string[] {
     const cliente = vista.clientes.get(String(v.id_cliente))
     if (cliente && v.cliente && v.cliente !== cliente.razon_social) avisos.push(`El pedido dice «${v.cliente}» y el maestro de clientes dice «${cliente.razon_social}».`)
   }
-  if (tabla.id === "aprobaciones") {
-    const p = vista.pedidos.get(String(v.id_pedido))
-    if (p && p.valor_pedido_cop !== v.valor_pedido_cop) avisos.push("El valor no coincide con el del pedido.")
-    if (p?.aprobo && p.aprobo !== v.aprobador) avisos.push(`El pedido dice que aprobó ${p.aprobo} y esta fila dice ${v.aprobador}.`)
-  }
   if (tabla.id === "cartera") {
     const p = vista.pedidos.get(String(v.id_pedido))
     if (p && p.id_cliente !== v.id_cliente) avisos.push(`La factura es de ${v.id_cliente} pero el pedido es de ${p.id_cliente}.`)
@@ -286,10 +284,18 @@ function revisarArchivo(nombre: string, texto: string, ctx: ContextoRevision, vi
   if (leido.separador !== ",") base.hallazgos.push({ nivel: "info", texto: `El separador es «${leido.separador === "\t" ? "tabulador" : leido.separador}» y no la coma. Se leyó bien.` })
   if (leido.vacias) base.hallazgos.push({ nivel: "info", texto: `Se saltaron ${leido.vacias} líneas en blanco.` })
 
+  const normales = leido.encabezado.map(normalizarEncabezado)
+  if (COLUMNAS_SAP.filter((k) => normales.includes(k)).length >= 5)
+    return {
+      ...bloquear(
+        "Es el archivo de aprobaciones de SAP y ya no se sube: trae lo mismo que las columnas de aprobación de pedidos. Las aprobaciones se dan en la app y salen de aquí hacia SAP, en este mismo formato, desde «2 · Aprobar».",
+      ),
+      yaNoSeSube: true,
+    }
   const det = detectarTabla(leido.encabezado, nombre)
   if (!det)
     return bloquear(
-      `No reconozco este archivo. Trae las columnas ${leido.encabezado.slice(0, 5).join(", ")}${leido.encabezado.length > 5 ? "…" : ""}, y no son las de clientes, pedidos, aprobaciones ni cartera.`,
+      `No reconozco este archivo. Trae las columnas ${leido.encabezado.slice(0, 5).join(", ")}${leido.encabezado.length > 5 ? "…" : ""}, y no son las de clientes, pedidos ni cartera.`,
     )
   const tabla = det.tabla
   base.tabla = tabla.id
@@ -303,7 +309,6 @@ function revisarArchivo(nombre: string, texto: string, ctx: ContextoRevision, vi
   if (opcionalesFaltan.length)
     base.hallazgos.push({ nivel: "aviso", texto: `Faltan columnas opcionales: ${opcionalesFaltan.join(", ")}. Quedan en blanco.` })
 
-  const normales = leido.encabezado.map(normalizarEncabezado)
   const repetidas = normales.filter((n, i) => n && normales.indexOf(n) !== i)
   if (repetidas.length) base.hallazgos.push({ nivel: "aviso", texto: `La columna ${[...new Set(repetidas)].join(", ")} está repetida. Se usa la primera.` })
   const columna = (campo: string) => normales.indexOf(campo)
@@ -414,9 +419,9 @@ function revisarArchivo(nombre: string, texto: string, ctx: ContextoRevision, vi
 
 // ── Todos los archivos ───────────────────────────────────────────────────────────
 
-/** Cada archivo se revisa apoyándose en la base y en los que ya se revisaron: clientes, luego pedidos, aprobaciones y cartera. */
+/** Cada archivo se revisa apoyándose en la base y en los que ya se revisaron: clientes, luego pedidos y cartera. */
 export function revisarArchivos(archivos: { nombre: string; texto: string }[], ctx: ContextoRevision): Revision {
-  const vista: Vista = { clientes: new Map(), pedidos: new Map(), aprobaciones: new Map(), cartera: new Map() }
+  const vista: Vista = { clientes: new Map(), pedidos: new Map(), cartera: new Map() }
   for (const t of TABLAS) for (const f of Object.values(ctx.base.tablas[t.id])) vista[t.id].set(f.clave, f.v)
 
   // El orden de las tablas lo da `orden`; los que no se reconocen van al final.

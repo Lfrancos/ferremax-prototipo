@@ -1,11 +1,13 @@
 import { diasCalendario, soloFecha } from "../fechas"
 import { normalizarEncabezado } from "./csv"
 
-// LAS CUATRO TABLAS DE LA CARGA. Este archivo es lo que en una base de datos real serían las tablas:
+// LAS TRES TABLAS DE LA CARGA. Este archivo es lo que en una base de datos real serían las tablas:
 // nombre de cada columna, tipo, cuáles son obligatorias, cuál es la llave y cuáles son las referencias entre tablas.
 // Los nombres de columna son los de los CSV de la sesión 9 (carpeta datos/01_Primero_Aprobacion).
+// El archivo de aprobaciones no se carga: es una copia de tres columnas de pedidos y la aprobación se da en la app.
+// Sale de aquí hacia SAP, con ese mismo formato (lib/exportar-sap.ts).
 
-export type TablaId = "clientes" | "pedidos" | "aprobaciones" | "cartera"
+export type TablaId = "clientes" | "pedidos" | "cartera"
 export type TipoCampo = "texto" | "entero" | "decimal" | "dinero" | "fecha" | "momento" | "opcion"
 export type Valor = string | number | null
 export type Valores = Record<string, Valor>
@@ -146,41 +148,13 @@ const PEDIDOS: Tabla = {
   },
 }
 
-const APROBACIONES: Tabla = {
-  id: "aprobaciones",
-  titulo: "Aprobaciones de crédito",
-  archivo: "03_aprobaciones_credito.csv",
-  descripcion: "El registro de cada solicitud de crédito y quién la decidió y cuándo.",
-  clave: "id_pedido",
-  orden: 3,
-  refs: [{ campo: "id_pedido", tabla: "pedidos" }],
-  campos: [
-    c("id_pedido", "texto", "Pedido que se decidió", "PED-2026-00001", { obligatorio: true, fijo: true, patron: /^PED-\d{4}-\d{5}$/, patronMensaje: "tiene que tener el formato PED-AAAA-00000" }),
-    c("solicitud_at", "momento", "Cuándo se pidió el crédito", "2026-04-01 08:20:00", { obligatorio: true, fijo: true }),
-    c("decision_at", "momento", "Cuándo se decidió", "2026-04-01 13:30:00", {}),
-    c("aprobador", "texto", "Quién decidió", "Marcela Ríos", { obligatorio: true, fijo: true }),
-    c("horas_espera", "decimal", "Horas entre la solicitud y la decisión", "5.2", {}),
-    c("dia_solicitud", "texto", "Día de la semana de la solicitud", "miércoles", {}),
-    c("valor_pedido_cop", "dinero", "Valor del pedido", "6120000", { obligatorio: true, fijo: true }),
-    c("resultado", "opcion", "Resultado de la solicitud", "Aprobado", { obligatorio: true, opciones: ["Aprobado", "Sin aprobar (cancelado)"] }),
-  ],
-  entreColumnas: (v) => {
-    const avisos: string[] = []
-    const sol = txt(v, "solicitud_at")
-    const dec = txt(v, "decision_at")
-    if (sol && dec && dec < sol) avisos.push("La decisión es anterior a la solicitud.")
-    if (v.resultado === "Aprobado" && !dec) avisos.push("Figura aprobado pero no trae fecha de decisión.")
-    return { problemas: [], avisos }
-  },
-}
-
 const CARTERA: Tabla = {
   id: "cartera",
   titulo: "Cartera",
-  archivo: "04_cartera_facturas.csv",
+  archivo: "03_cartera_facturas.csv",
   descripcion: "Las facturas con lo pagado, el saldo pendiente y los días de mora al corte. De aquí salen el saldo y el atraso de cada cliente.",
   clave: "id_factura",
-  orden: 4,
+  orden: 3,
   refs: [
     { campo: "id_cliente", tabla: "clientes" },
     { campo: "id_pedido", tabla: "pedidos" },
@@ -226,7 +200,7 @@ const CARTERA: Tabla = {
   },
 }
 
-export const TABLAS: Tabla[] = [CLIENTES, PEDIDOS, APROBACIONES, CARTERA]
+export const TABLAS: Tabla[] = [CLIENTES, PEDIDOS, CARTERA]
 export const tablaPorId = (id: TablaId) => TABLAS.find((t) => t.id === id)!
 
 /** Qué tabla es un archivo, mirando sus encabezados (y, si empatan, su nombre). */
@@ -236,7 +210,7 @@ export function detectarTabla(
 ): { tabla: Tabla; reconocidas: number; faltan: string[]; sobran: string[]; renombradas: { original: string; campo: string }[] } | null {
   const normales = encabezado.map(normalizarEncabezado)
   const nombre = normalizarEncabezado(nombreArchivo)
-  const PISTAS: Record<TablaId, string> = { clientes: "cliente", pedidos: "pedidos", aprobaciones: "aprobacion", cartera: "cartera" }
+  const PISTAS: Record<TablaId, string> = { clientes: "cliente", pedidos: "pedidos", cartera: "cartera" }
   const suena = (t: Tabla) => nombre.includes(PISTAS[t.id])
   let mejor: { tabla: Tabla; puntos: number } | null = null
   for (const tabla of TABLAS) {
@@ -247,7 +221,7 @@ export function detectarTabla(
   if (!mejor) return null
   const { tabla } = mejor
   const reconocidas = tabla.campos.filter((k) => normales.includes(k.nombre)).length
-  // Menos de la mitad de las columnas: no es ninguna de las cuatro, salvo que el nombre lo diga y traiga la llave.
+  // Menos de la mitad de las columnas: no es ninguna de las tres, salvo que el nombre lo diga y traiga la llave.
   if (reconocidas < tabla.campos.length / 2 && !(suena(tabla) && normales.includes(tabla.clave))) return null
   const conocidas = new Set(tabla.campos.map((k) => k.nombre))
   return {

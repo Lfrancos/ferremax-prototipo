@@ -8,14 +8,15 @@ import { fmtFechaHora } from "@/lib/fechas"
 
 const TITULOS: [string, string][] = [
   ["/como-funciona", "Cómo funciona"],
-  ["/solicitudes", "Cargar pedidos"],
+  ["/solicitudes", "1 · Cargar pedidos"],
   ["/clientes", "Clientes"],
   ["/cartera", "Informe de cartera"],
   ["/pedidos", "Ficha del pedido"],
-  ["/bodega", "Bodega"],
-  ["/transporte", "Transporte"],
+  ["/bodega", "3 · Bodega"],
+  ["/transporte", "4 · Transporte"],
   ["/remisiones", "Remisión"],
   ["/facturas", "Factura"],
+  ["/aprobar", "2 · Aprobar"],
   ["/alertas", "Alertas"],
   ["/avisos", "Avisos por WhatsApp"],
   ["/revision", "Revisión del lunes"],

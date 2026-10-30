@@ -1,4 +1,5 @@
 import { CLIENTES, HOY, PARTIDAS_INICIALES } from "../data"
+import { COLUMNAS_SAP } from "../exportar-sap"
 import { diasCalendario, soloFecha } from "../fechas"
 import { escribirCSV } from "./csv"
 import { tablaPorId, type TablaId } from "./esquema"
@@ -95,17 +96,6 @@ function entregado(id: string, id_cliente: string, fecha: string, valor: number,
   }
 }
 
-const aprobacion = (p: Fila, horas: number): Fila => ({
-  id_pedido: p.id_pedido,
-  solicitud_at: p.solicitud_credito_at,
-  decision_at: p.aprobacion_credito_at,
-  aprobador: p.aprobo,
-  horas_espera: horas,
-  dia_solicitud: "viernes",
-  valor_pedido_cop: p.valor_pedido_cop,
-  resultado: "Aprobado",
-})
-
 /** Un pedido a crédito con solicitud y sin aprobación: es una solicitud por aprobar. */
 function porAprobar(id: string, id_cliente: string, valor: number, lineas: number, hora: string): Fila {
   const c = CLIENTES.find((x) => x.id_cliente === id_cliente) ?? { razon_social: String(NUEVO_135.razon_social), segmento: "Constructora", sede: "Bogotá", vendedor: "Paula Cifuentes" }
@@ -172,7 +162,6 @@ function dia1(): Archivo[] {
   return [
     { nombre: `clientes_${DIA}.csv`, texto: csv("clientes", [...ID_DEMO.map(cliente), NUEVO_135, NUEVO_136]) },
     { nombre: `pedidos_${DIA}.csv`, texto: csv("pedidos", pedidos) },
-    { nombre: `aprobaciones_credito_${DIA}.csv`, texto: csv("aprobaciones", HISTORICOS.map((p, i) => aprobacion(p, [5, 9, 4, 6][i]))) },
     { nombre: `cartera_facturas_${DIA}.csv`, texto: csv("cartera", facturas()) },
   ]
 }
@@ -203,20 +192,6 @@ function dia2(): Archivo[] {
     porAprobar("PED-2026-03117", "CLI-002", 4_200_000, 2, "09:00"),
   )
 
-  const aprobaciones: Fila[] = [
-    ...HISTORICOS.map((p, i) => aprobacion(p, [5, 9, 4, 6][i])),
-    {
-      id_pedido: "PED-2026-03108",
-      solicitud_at: `${DIA} 06:45:00`,
-      decision_at: `${DIA} 08:40:00`,
-      aprobador: "Marcela Ríos",
-      horas_espera: 1.9,
-      dia_solicitud: "lunes",
-      valor_pedido_cop: 6_250_000,
-      resultado: "Aprobado",
-    },
-  ]
-
   const cartera = facturas().map((f, i) => {
     const pagada = { ...f, saldo_pendiente_cop: 0, valor_pagado_cop: f.valor_factura_cop, dias_mora_al_corte: 0, estado_al_corte: "Pagada" }
     if (i === 1 || i === 4) return pagada
@@ -229,7 +204,6 @@ function dia2(): Archivo[] {
   return [
     { nombre: `clientes_${DIA}_b.csv`, texto: csv("clientes", clientes) },
     { nombre: `pedidos_${DIA}_b.csv`, texto: csv("pedidos", pedidos) },
-    { nombre: `aprobaciones_credito_${DIA}_b.csv`, texto: csv("aprobaciones", aprobaciones) },
     { nombre: `cartera_facturas_${DIA}_b.csv`, texto: csv("cartera", cartera.map((f) => ({ ...f, comentario: "" })), ["comentario"]) },
   ]
 }
@@ -241,10 +215,12 @@ function roto(): Archivo[] {
     .map((linea, i) => (i === 0 ? linea.replace("valor_pedido_cop,", "") : linea.replace(/,1000000,/, ",")))
     .join("\r\n")
   const clientes = csv("clientes", [cliente("CLI-002"), { ...cliente("CLI-021"), razon_social: "Urbanizadora Palmetto S.A." }]).replace("Ingeniería", "IngenierÃ­a")
+  const aprobaciones = escribirCSV([...COLUMNAS_SAP], [["PED-2026-03001", "2026-11-20 08:20:00", "2026-11-20 13:20:00", "Marcela Ríos", "5", "viernes", "8400000", "Aprobado"]])
   return [
     { nombre: "pedidos_sin_valor.csv", texto: sinValor },
     { nombre: "reporte_ventas_octubre.csv", texto: "sucursal;mes;ventas\r\nNorte;octubre;120\r\nSur;octubre;98\r\n" },
     { nombre: "clientes_mal_codificados.csv", texto: clientes },
+    { nombre: "03_aprobaciones_credito.csv", texto: aprobaciones },
   ]
 }
 
@@ -253,7 +229,7 @@ export function archivosEjemplo(juego: JuegoEjemplo): Archivo[] {
 }
 
 export const TITULO_EJEMPLO: Record<JuegoEjemplo, { titulo: string; detalle: string }> = {
-  dia1: { titulo: "Primer día", detalle: "4 archivos limpios: clientes, pedidos con 6 solicitudes por aprobar, aprobaciones y cartera." },
+  dia1: { titulo: "Primer día", detalle: "3 archivos limpios: clientes, pedidos con 6 solicitudes por aprobar y cartera." },
   dia2: { titulo: "Día siguiente", detalle: "Lo mismo, subido otra vez, con repetidos, cambios, un valor que no debería cambiar, un posible duplicado y errores." },
-  roto: { titulo: "Archivos con problemas", detalle: "Un archivo sin una columna, uno de otro sistema y uno con la codificación dañada." },
+  roto: { titulo: "Archivos con problemas", detalle: "Un archivo sin una columna, uno de otro sistema, uno con la codificación dañada y el de aprobaciones, que ya no se sube." },
 }

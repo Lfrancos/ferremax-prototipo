@@ -3,8 +3,9 @@
 import { createContext, useContext, useMemo, useReducer, useState, type ReactNode } from "react"
 import type { ResultadoCarga } from "./carga/aplicar"
 import { CARGA_MANUAL, baseInicial, clienteDeFila, filaDeCliente, type Base } from "./carga/base"
-import { CARTERA_INICIAL, CLIENTES, HOY, MENSAJES_INICIALES, PEDIDOS } from "./data"
+import { CARTERA_INICIAL, CLIENTES, HOY, MENSAJES_INICIALES, PEDIDOS, ULTIMA_EXPORTACION } from "./data"
 import { describirMensaje, pedidoDelMensaje } from "./evidencia"
+import { decisionesParaSAP, exportacionInicial, pendientesDeExportar, siguienteLote, type DecisionSAP, type Exportacion } from "./exportar-sap"
 import { cambiarNumero, numeroDe, restaurarNumeros } from "./rules"
 import type {
   Cliente,
@@ -44,6 +45,8 @@ interface Datos {
   mensajes: MensajeTransporte[]
   whatsapp: MensajeWhatsApp[]
   cambios: CambioRegla[]
+  /** Los archivos que se han sacado para SAP con las decisiones de la app (lib/exportar-sap). */
+  exportaciones: Exportacion[]
 }
 
 type Accion =
@@ -57,9 +60,18 @@ type Accion =
   | { tipo: "agregarPedidos"; registros: PedidoRegistro[] }
   | { tipo: "reemplazarCartera"; cartera: CorteCartera }
   | { tipo: "cambioRegla"; cambio: CambioRegla }
+  | { tipo: "exportar"; exportacion: Exportacion }
   | { tipo: "reiniciar" }
 
-const INICIO: Datos = { registros: PEDIDOS, base: baseInicial(CLIENTES), cartera: CARTERA_INICIAL, mensajes: MENSAJES_INICIALES, whatsapp: [], cambios: [] }
+const INICIO: Datos = {
+  registros: PEDIDOS,
+  base: baseInicial(CLIENTES),
+  cartera: CARTERA_INICIAL,
+  mensajes: MENSAJES_INICIALES,
+  whatsapp: [],
+  cambios: [],
+  exportaciones: [exportacionInicial(PEDIDOS, ULTIMA_EXPORTACION)],
+}
 
 /** Un mensaje asociado a un pedido que va en camino lo da por entregado y deja su constancia en el historial. */
 function conMensaje(registros: PedidoRegistro[], m: MensajeTransporte): PedidoRegistro[] {
@@ -124,6 +136,8 @@ function reducir(d: Datos, a: Accion): Datos {
       return { ...d, cartera: a.cartera }
     case "cambioRegla":
       return { ...d, cambios: [...d.cambios, a.cambio] }
+    case "exportar":
+      return { ...d, exportaciones: [...d.exportaciones, a.exportacion] }
     case "reiniciar":
       return INICIO
   }
@@ -144,6 +158,12 @@ interface Prototipo {
   /** Lo que se han escrito en el chat de WhatsApp quienes aprueban y el sistema (sin los avisos, que se calculan). */
   whatsapp: MensajeWhatsApp[]
   cambios: CambioRegla[]
+  /** Los lotes ya sacados para SAP. EXP-000 es lo que se había pasado antes de abrir la demostración. */
+  exportaciones: Exportacion[]
+  /** Lo decidido en la app que todavía no sale en ningún lote. */
+  porExportar: DecisionSAP[]
+  /** Arma un lote con lo pendiente y lo devuelve, para descargarlo. */
+  exportarASAP: () => { lote: Exportacion; decisiones: DecisionSAP[] }
   registrar: (id: string, evento: Evento) => void
   /** Nelson entrega el pedido a transporte: queda el registro de lo cargado y el evento que cierra el reloj de bodega. */
   despachar: (id: string, despacho: Despacho, evento: Evento) => void
@@ -181,6 +201,7 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [datos.registros, clientes, datos.cartera, datos.mensajes, datos.cambios],
   )
+  const porExportar = useMemo(() => pendientesDeExportar(decisionesParaSAP(datos.registros), datos.exportaciones), [datos.registros, datos.exportaciones])
 
   const valor: Prototipo = {
     pedidos,
@@ -190,6 +211,13 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
     mensajes: datos.mensajes,
     whatsapp: datos.whatsapp,
     cambios: datos.cambios,
+    exportaciones: datos.exportaciones,
+    porExportar,
+    exportarASAP: () => {
+      const lote: Exportacion = { id: siguienteLote(datos.exportaciones), fecha: HOY, quien: rol, pedidos: porExportar.map((d) => d.id_pedido) }
+      dispatch({ tipo: "exportar", exportacion: lote })
+      return { lote, decisiones: porExportar }
+    },
     reemplazarCartera: (cartera) => dispatch({ tipo: "reemplazarCartera", cartera }),
     registrar: (id, evento) => dispatch({ tipo: "registrar", id, evento }),
     despachar: (id, despacho, evento) => dispatch({ tipo: "despachar", id, despacho, evento }),

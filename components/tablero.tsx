@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { PasosPedido } from "@/components/ferremax/pasos"
 import { DataTable } from "@/components/data-table"
 import { SectionCards } from "@/components/section-cards"
 import type { Filtro } from "@/lib/vistas"
@@ -11,6 +12,7 @@ export function Tablero() {
   const [filtro, setFiltro] = useState<Filtro>("todos")
   return (
     <>
+      <PasosPedido />
       <SectionCards filtro={filtro} onFiltro={setFiltro} />
       <ChartAreaInteractive />
       <DataTable filtro={filtro} onFiltro={setFiltro} />

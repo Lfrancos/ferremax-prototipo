@@ -7,6 +7,7 @@ import { AlertTriangleIcon, CheckCircle2Icon, FileUpIcon, InfoIcon, XCircleIcon 
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { aplicarCarga, type ResultadoCarga } from "@/lib/carga/aplicar"
+import { CARGA_DEMO } from "@/lib/carga/base"
 import { TABLAS, tablaPorId, type Valor } from "@/lib/carga/esquema"
 import { archivosEjemplo, TITULO_EJEMPLO, type JuegoEjemplo } from "@/lib/carga/ejemplo"
 import {
@@ -33,7 +34,7 @@ import { ReglaBoton } from "./insignia"
 import { Bloque } from "./piezas"
 import { DescargaApartadas } from "./base-datos"
 
-// Cargar archivos: se suben los CSV de SAP (clientes, pedidos, aprobaciones, cartera), se revisan antes de guardar y se guardan
+// Cargar archivos: se suben los tres CSV de SAP (clientes, pedidos, cartera), se revisan antes de guardar y se guardan
 // en la base sin perder ninguna fila. Toda la lógica está en lib/carga (sin React); aquí solo se muestra y se decide.
 
 const ETIQUETA: Record<Clase, { clase: ClaseEtiqueta; palabra: string }> = {
@@ -127,16 +128,27 @@ export function CargarArchivos() {
     : null
   const hayAlgo = revision?.archivos.some((a) => !a.bloqueado) ?? false
   const ver = (id: string) => abiertos[id] ?? false
+  const deLaDemo = Object.values(base.tablas.clientes).filter((f) => f.carga === CARGA_DEMO).length
 
   return (
     <div className="flex flex-col gap-6">
       <Bloque
-        titulo="1 · Los cuatro archivos que se suben"
+        titulo="Los tres archivos que se suben"
         tipos={["humano"]}
         pie={
           <>
             Salen de SAP como CSV (en Excel: Guardar como → CSV UTF-8). Se pueden subir juntos y en cualquier orden: la app los revisa en este orden porque cada
-            uno se apoya en el anterior. Qué reporte de SAP saca cada uno: <span className="dato">[por definir]</span>
+            uno se apoya en el anterior. El de aprobaciones ya no se sube: la aprobación se da aquí y sale hacia SAP desde{" "}
+            <Link href="/aprobar" className="underline underline-offset-4">
+              2 · Aprobar
+            </Link>
+            . Qué reporte de SAP saca cada uno: <span className="dato">[por definir]</span>
+            {deLaDemo > 0 && (
+              <>
+                <br />
+                «Ya en la base» cuenta lo que hay antes de subir. La demostración arranca con {deLaDemo} clientes con sus mismos códigos de SAP: por eso, al subir el archivo de clientes, esos {deLaDemo} salen como «ya estaban».
+              </>
+            )}
           </>
         }
       >
@@ -148,7 +160,7 @@ export function CargarArchivos() {
                 <TableHead className="etiqueta">Archivo</TableHead>
                 <TableHead className="etiqueta">Qué trae</TableHead>
                 <TableHead className="etiqueta">Llave</TableHead>
-                <TableHead className="etiqueta text-right">Filas en la base</TableHead>
+                <TableHead className="etiqueta text-right">Ya en la base</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,7 +192,7 @@ export function CargarArchivos() {
       </Bloque>
 
       <Bloque
-        titulo="2 · Subir los archivos"
+        titulo="Subir los archivos"
         tipos={["humano"]}
         pie="Nada se guarda todavía: primero se revisa. Si algo no se puede leer, el archivo se descarta completo; las filas con error se apartan y el resto sigue."
       >
@@ -233,7 +245,7 @@ export function CargarArchivos() {
 
       {revision && (
         <Bloque
-          titulo="3 · Revisar antes de guardar"
+          titulo="Revisar antes de guardar"
           tipos={["regla"]}
           reglas={[ASIGNAR_APROBADOR.id]}
           pie="Cada fila queda en una sola clase, por eso las cuentas siempre cuadran con las filas del archivo. Lo que no se guarda queda apartado con su motivo, para corregirlo en SAP y volver a subir: las que ya estaban no se duplican."
@@ -248,7 +260,13 @@ export function CargarArchivos() {
                 <section key={a.nombre} className={cn("border p-4", a.bloqueado ? "border-vencido" : "border-linea")}>
                   <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h3 className="font-mono text-[15px]">{a.nombre}</h3>
-                    {a.tabla ? <Estado clase="en-plazo" palabra={tablaPorId(a.tabla).titulo} className="text-xs" /> : <Estado clase="vencido" palabra="No se reconoce" className="text-xs" />}
+                    {a.tabla ? (
+                      <Estado clase="en-plazo" palabra={tablaPorId(a.tabla).titulo} className="text-xs" />
+                    ) : a.yaNoSeSube ? (
+                      <Estado clase="aviso" palabra="Aprobaciones · ya no se sube" className="text-xs" />
+                    ) : (
+                      <Estado clase="vencido" palabra="No se reconoce" className="text-xs" />
+                    )}
                     {!a.bloqueado && <span className="text-sm text-muted-foreground">{a.total} filas</span>}
                     {a.bloqueado && <span className="text-sm text-vencido">No se carga nada de este archivo</span>}
                   </div>
@@ -395,7 +413,7 @@ export function CargarArchivos() {
       )}
 
       {resultado && (
-        <Bloque titulo={`4 · Guardado · ${resultado.carga.id}`} tipos={["regla"]} reglas={[ASIGNAR_APROBADOR.id, AVISO_WHATSAPP.id]}>
+        <Bloque titulo={`Guardado · ${resultado.carga.id}`} tipos={["regla"]} reglas={[ASIGNAR_APROBADOR.id, AVISO_WHATSAPP.id]}>
           <ul className="flex flex-col gap-2 text-[15px]">
             {resultado.carga.archivos.map((a) => (
               <li key={a.nombre} className="flex gap-2">

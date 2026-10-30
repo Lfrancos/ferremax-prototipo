@@ -5,6 +5,7 @@ import { CargaBodega } from "@/components/ferremax/carga-bodega"
 import { BotonEntregar } from "@/components/ferremax/entregar"
 import { Estado } from "@/components/ferremax/estado"
 import { ReglaBoton } from "@/components/ferremax/insignia"
+import { PasosPedido } from "@/components/ferremax/pasos"
 import { Bloque, PorDefinir, Titulo } from "@/components/ferremax/piezas"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { hrefRemision } from "@/lib/documentos"
@@ -31,10 +32,11 @@ export default function Bodega() {
   return (
     <>
       <Titulo
-        indice="(004) Bodega · vista de Nelson"
+        indice="Paso 3 · Bodega · vista de Nelson"
         titulo="Lista de alistamiento de mañana"
         bajada={`Corte: ${fmtFechaHora(corte)} · La lista sale sola. Nadie revisa bandejas.`}
       />
+      <PasosPedido paso={3} />
 
       <Bloque
         titulo={`${filas.length} pedidos a crédito, en orden`}
