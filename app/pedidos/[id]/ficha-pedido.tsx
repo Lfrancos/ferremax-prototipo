@@ -12,6 +12,7 @@ import { HistorialPedido } from "@/components/ferremax/historial"
 import { ReglaBoton } from "@/components/ferremax/insignia"
 import { Bloque, NotaPropuesta, Titulo } from "@/components/ferremax/piezas"
 import { fmtDia, fmtFechaHora } from "@/lib/fechas"
+import { fmtCOP } from "@/lib/formato"
 import { notaDeContexto } from "@/lib/propuestas"
 import {
   ASIGNAR_APROBADOR,
@@ -20,13 +21,14 @@ import {
   FECHA_LIMITE,
   FICHA,
   FIRMAR_PEDIDO,
+  SALDO_VENCIDO,
   REMISION_SIN_FIRMA,
   VER_INFO_CREDITO,
 } from "@/lib/rules"
 import { usePrototipo } from "@/lib/store"
 import type { Pedido } from "@/lib/tipos"
 import { cn } from "@/lib/utils"
-import { ETIQUETA_ESTADO, asignacion, decision, listoDesde, relojAprobacion, relojBodega, tramoDe } from "@/lib/vistas"
+import { ETIQUETA_ESTADO, asignacion, decision, listoDesde, relojAprobacion, relojBodega, resumenDecision, tramoDe } from "@/lib/vistas"
 
 export function FichaPedido({ id }: { id: string }) {
   const { pedidos, rol } = usePrototipo()
@@ -70,9 +72,9 @@ export function FichaPedido({ id }: { id: string }) {
               <NotaContexto pedido={p} pedidos={pedidos} />
             </>
           ) : (
-            <Bloque titulo="2 · Ficha de cinco líneas" tipos={["regla"]} reglas={[VER_INFO_CREDITO.id]}>
+            <Bloque titulo="2 · Ficha de decisión" tipos={["regla"]} reglas={[VER_INFO_CREDITO.id]}>
               <p className="text-[15px] text-muted-foreground">
-                La ficha trae valor, cupo, saldo, atraso y antigüedad. Tu rol ve solo el nombre del cliente.
+                La ficha trae valor, cupo autorizado y disponible, saldo vencido, atraso y antigüedad. Tu rol ve solo el nombre del cliente.
               </p>
             </Bloque>
           )}
@@ -135,11 +137,22 @@ function QuienAprueba({ pedido, verInfo }: { pedido: Pedido; verInfo: boolean })
 
 function Ficha({ pedido }: { pedido: Pedido }) {
   const f = FICHA.fn(pedido)
+  const r = resumenDecision(pedido)
+  const blanco = "[en blanco]"
+  // Las cinco líneas son las de la Política (CRED-2.6). Las de abajo salen de los mismos datos del corte de cartera.
+  const paraDecidir = [
+    { rotulo: "Cupo autorizado", valor: `COP ${fmtCOP(r.cupoAutorizado)}` },
+    { rotulo: "Cupo disponible", valor: r.cupoDisponible === null ? blanco : `COP ${fmtCOP(r.cupoDisponible)}`, regla: CHEQUEOS[1].id },
+    { rotulo: "Saldo vencido", valor: r.saldoVencido === null ? blanco : `COP ${fmtCOP(r.saldoVencido)}`, regla: SALDO_VENCIDO.id },
+  ]
   return (
     <section className="border border-linea bg-card">
-      <div className="flex items-center justify-between gap-3 bg-amarillo px-6 py-3 text-sobre-amarillo">
-        <h2 className="subtitulo">2 · Ficha de cinco líneas · {pedido.id_pedido}</h2>
-        <ReglaBoton id={FICHA.id} className="border-sobre-amarillo bg-sobre-amarillo text-amarillo" />
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-amarillo px-6 py-3 text-sobre-amarillo">
+        <h2 className="subtitulo">2 · Ficha de decisión · {pedido.id_pedido}</h2>
+        <div className="flex items-center gap-2">
+          {r.requiereRevision && <span className="etiqueta border border-sobre-amarillo px-2 py-0.5">Requiere revisión</span>}
+          <ReglaBoton id={FICHA.id} className="border-sobre-amarillo bg-sobre-amarillo text-amarillo" />
+        </div>
       </div>
       <dl className="divide-y divide-linea px-6">
         {f.lineas.map((l) => (
@@ -148,7 +161,32 @@ function Ficha({ pedido }: { pedido: Pedido }) {
             <dd className={cn("text-lg", l.valor.includes("[en blanco]") && "text-vencido")}>{l.valor}</dd>
           </div>
         ))}
+        {paraDecidir.map((l) => (
+          <div key={l.rotulo} className="grid grid-cols-[14rem_1fr] gap-4 py-3">
+            <dt className="etiqueta pt-1 text-muted-foreground">{l.rotulo}</dt>
+            <dd className={cn("flex items-center gap-2 text-lg", l.valor === blanco && "text-vencido")}>
+              {l.valor} {l.regla && <ReglaBoton id={l.regla} soloId />}
+            </dd>
+          </div>
+        ))}
+        <div className="grid grid-cols-[14rem_1fr] gap-4 py-3">
+          <dt className="etiqueta pt-1 text-muted-foreground">Condición</dt>
+          <dd className={cn("text-lg", r.requiereRevision ? "font-medium text-vencido" : "text-aprobado")}>
+            {r.requiereRevision ? r.condiciones.join(" · ") : "Pasa los cuatro chequeos"}
+          </dd>
+        </div>
       </dl>
+      {r.informacion.length > 0 && (
+        <div className="border-t border-linea px-6 py-4">
+          <p className="etiqueta mb-2 text-muted-foreground">Información para decidir</p>
+          <p className="text-[15px]">{r.informacion.join(" ")}</p>
+          {r.requiereRevision && (
+            <p className="mt-2 text-[15px] text-muted-foreground">
+              Se necesita revisar si procede una excepción, un pago previo o un ajuste de condiciones. [por definir: ninguna regla lo dice]
+            </p>
+          )}
+        </div>
+      )}
       <p className="border-t border-linea px-6 py-3 text-sm text-muted-foreground">
         {f.pie ? <>Chequeo que falló: {f.pie}</> : "No falla ningún chequeo."} No se mira precio, margen, inventario ni ruta.
       </p>

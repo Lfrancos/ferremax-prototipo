@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { fmtFechaHora, leerFechaHora } from "@/lib/fechas"
 import { fmtCOP, fmtHoras } from "@/lib/formato"
 import { COLUMNAS_SAP, NOMBRE_EJEMPLO, archivoEjemplo, descargar, revisarArchivo, type FilaRevisada, type Revision } from "@/lib/importar"
-import { ASIGNAR_APROBADOR, IMPORTAR_SOLICITUDES, RELOJ_APROBACION, VER_INFO_CREDITO } from "@/lib/rules"
+import { ASIGNAR_APROBADOR, AVISO_WHATSAPP, IMPORTAR_SOLICITUDES, RELOJ_APROBACION, VER_INFO_CREDITO } from "@/lib/rules"
 import { usePrototipo } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { asignacion, horasDeEspera, unirPedidos } from "@/lib/vistas"
@@ -46,7 +46,7 @@ export function ImportarSAP() {
     setImportados(registros.map((r) => r.id_pedido))
     setRevision(null)
     setPegado("")
-    toast.success(`${registros.length} solicitudes importadas`, { description: "La regla del momento 1 ya les asignó aprobador." })
+    toast.success(`${registros.length} solicitudes importadas`, { description: "Ya tienen aprobador y a cada uno se le avisó por WhatsApp (NOT-1)." })
   }
 
   return (
@@ -204,7 +204,7 @@ export function ImportarSAP() {
       )}
 
       {importados.length > 0 && (
-        <Bloque titulo="Importadas" tipos={["regla"]} reglas={[ASIGNAR_APROBADOR.id]}>
+        <Bloque titulo="Importadas" tipos={["regla"]} reglas={[ASIGNAR_APROBADOR.id, AVISO_WHATSAPP.id]}>
           <p className="text-[15px]">
             Entraron al flujo:{" "}
             {importados.map((id, i) => (
@@ -215,7 +215,11 @@ export function ImportarSAP() {
                 </Link>
               </span>
             ))}
-            . Ya aparecen en el tablero, con su aprobador y su reloj.
+            . Ya aparecen en el tablero, con su aprobador y su reloj, y a quien las aprueba le llegó el aviso por{" "}
+            <Link href="/avisos" className="underline underline-offset-4">
+              WhatsApp
+            </Link>
+            .
           </p>
         </Bloque>
       )}

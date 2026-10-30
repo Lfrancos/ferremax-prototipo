@@ -1,7 +1,7 @@
 import { HOY } from "./data"
 import { combinarEvidencia, remisionDe } from "./evidencia"
 import { diaDeSemana, diasCalendario, enRango, esAntes, horasEntre, soloFecha, sumarDias, sumarHoras } from "./fechas"
-import { fmtHoras } from "./formato"
+import { fmtCOP, fmtDias, fmtHoras } from "./formato"
 import { lineasDe } from "./lineas"
 import {
   A_TIEMPO,
@@ -11,9 +11,11 @@ import {
   CHEQUEO_ATRASO,
   CHEQUEO_CLIENTE_NUEVO,
   CHEQUEO_CUPO,
+  CHEQUEOS,
   CRUCE_DEL_LIMITE,
   DIAS_DE_ATRASO,
   SALDO_PENDIENTE,
+  SALDO_VENCIDO,
   ENTRADA_A_LA_FILA,
   EVIDENCIA_ENTREGA,
   FECHA_LIMITE,
@@ -59,6 +61,8 @@ import {
 export interface EstadoCartera {
   partidas: PartidaAbierta[]
   saldo: number | null
+  /** Saldo abierto de las facturas ya vencidas (CART-5). */
+  saldoVencido: number | null
   atraso: number | null
   /** Factura vencida más antigua (la que da el atraso). */
   facturaMasAntigua: string | null
@@ -74,6 +78,7 @@ export function estadoCartera(id_cliente: string, cartera: CorteCartera, hoy: Fe
   return {
     partidas,
     saldo: SALDO_PENDIENTE.fn(partidas),
+    saldoVencido: SALDO_VENCIDO.fn(partidas, hoy),
     atraso: atraso.dias,
     facturaMasAntigua: atraso.factura,
     pagoSinAplicar: partidas.filter((p) => p.tipo === "Pago sin aplicar").reduce((s, p) => s + p.valor_cop, 0),
@@ -116,6 +121,7 @@ export function unirPedidos(
       saldo_pendiente_cop: e.saldo,
       dias_atraso: e.atraso,
       factura_mas_antigua: e.facturaMasAntigua,
+      saldo_vencido_cop: e.saldoVencido,
       pago_sin_aplicar_cop: e.pagoSinAplicar,
       antiguedad_anios: c.antiguedad_anios,
       mensajes: mensajes.filter((m) => m.id_pedido === r.id_pedido),
@@ -135,6 +141,65 @@ export function chequeosDeCliente(c: Cliente, cartera: CorteCartera) {
   return [CHEQUEO_CUPO, CHEQUEO_ATRASO, CHEQUEO_CLIENTE_NUEVO]
     .map((regla) => ({ regla, resultado: regla.fn(comoPedido) }))
     .filter((x) => x.resultado.pasa !== true)
+}
+
+// ── Ficha de decisión ───────────────────────────────────────────────────────────
+
+export interface ResumenDecision {
+  pedido: number
+  cupoAutorizado: number
+  /** null = el saldo está en blanco. */
+  cupoDisponible: number | null
+  saldoVencido: number | null
+  /** Cuánto se pasa el pedido del cupo disponible; 0 si cabe. */
+  excesoCupo: number
+  /** Chequeos que no pasan, dichos como condición ("Excede cupo disponible"). */
+  condiciones: string[]
+  /** Hechos de los datos, una frase cada uno. */
+  informacion: string[]
+  /** Hay algo que revisar antes de decidir. */
+  requiereRevision: boolean
+}
+
+const CONDICION_DE: Record<string, (p: Pedido) => string> = {
+  "CRED-2.1": () => "Supera el máximo por pedido",
+  "CRED-2.2": () => "Excede cupo disponible",
+  "CRED-2.3": (p) => `Atraso de ${p.dias_atraso} días`,
+  "CRED-2.4": (p) => `Cliente nuevo (${p.antiguedad_anios} ${p.antiguedad_anios === 1 ? "año" : "años"})`,
+}
+
+/**
+ * Lo que necesita quien aprueba para decidir, en una sola ficha: pedido, cupo autorizado y disponible,
+ * saldo vencido y la condición que lo manda a revisión. Son los mismos datos y chequeos de siempre;
+ * aquí solo se ordenan y se dicen en frases. No decide nada.
+ */
+export function resumenDecision(p: Pedido): ResumenDecision {
+  const cupoDisponible = p.saldo_pendiente_cop === null ? null : p.cupo_cop - p.saldo_pendiente_cop
+  const excesoCupo = cupoDisponible === null ? 0 : Math.max(0, p.valor_cop - cupoDisponible)
+  const condiciones: string[] = []
+  for (const c of CHEQUEOS) {
+    const r = c.fn(p)
+    if (r.pasa === false) condiciones.push(CONDICION_DE[c.id](p))
+    if (r.pasa === null) condiciones.push(`Falta ${r.falta}`)
+  }
+  const informacion: string[] = []
+  if (excesoCupo > 0) informacion.push(`El pedido supera el cupo disponible en COP ${fmtCOP(excesoCupo)}.`)
+  if (p.saldo_vencido_cop !== null && p.saldo_vencido_cop > 0) {
+    const atraso = p.dias_atraso ? ` La factura vencida más antigua lleva ${fmtDias(p.dias_atraso)}.` : ""
+    informacion.push(`Existe cartera vencida de COP ${fmtCOP(p.saldo_vencido_cop)}.${atraso}`)
+  }
+  if (p.pago_sin_aplicar_cop > 0)
+    informacion.push(`El cliente tiene un pago sin aplicar de COP ${fmtCOP(p.pago_sin_aplicar_cop)}.`)
+  return {
+    pedido: p.valor_cop,
+    cupoAutorizado: p.cupo_cop,
+    cupoDisponible,
+    saldoVencido: p.saldo_vencido_cop,
+    excesoCupo,
+    condiciones,
+    informacion,
+    requiereRevision: condiciones.length > 0,
+  }
 }
 
 // ── Lo básico de un pedido ──────────────────────────────────────────────────────

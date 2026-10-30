@@ -60,7 +60,7 @@ export function CrearSolicitud() {
     if (pesos === null || pesos <= 0) return setError("Escribe el valor del pedido en pesos.")
     if (!Number.isInteger(nLineas) || nLineas <= 0) return setError("Las líneas tienen que ser un número entero mayor que 0.")
     agregarPedidos([borrador])
-    toast.success(`${id} creada`, { description: `La aprueba ${a.texto}.` })
+    toast.success(`${id} creada`, { description: `La aprueba ${a.texto}, que recibe el aviso por WhatsApp.` })
     setValor("")
     setLineas("1")
     setNota("")

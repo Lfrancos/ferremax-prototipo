@@ -34,6 +34,7 @@ export function HistorialPedido({ pedido, horizontal = false }: { pedido: Pedido
           </div>
           <p className="text-sm text-muted-foreground">
             {fmtFechaHora(e.fecha)} · {e.quien}
+            {e.via && ` · por ${e.via}`}
           </p>
           {e.motivo &&
             (verInfo || !DE_CREDITO.has(e.accion) ? (

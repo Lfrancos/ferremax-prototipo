@@ -9,6 +9,7 @@ import {
   InboxIcon,
   LayoutDashboardIcon,
   ListOrderedIcon,
+  MessageCircleIcon,
   RouteIcon,
   TruckIcon,
   UsersIcon,
@@ -32,7 +33,7 @@ const CLIENTES: ItemNav[] = [
 ]
 
 const PEDIDOS: ItemNav[] = [
-  { titulo: "Solicitudes", url: "/solicitudes", icono: <InboxIcon /> },
+  { titulo: "Cargar pedidos", url: "/solicitudes", icono: <InboxIcon /> },
   { titulo: "Tablero de pedidos", url: "/", icono: <LayoutDashboardIcon /> },
   { titulo: "Bodega", url: "/bodega", icono: <ListOrderedIcon /> },
   { titulo: "Transporte", url: "/transporte", icono: <TruckIcon /> },
@@ -40,6 +41,7 @@ const PEDIDOS: ItemNav[] = [
 
 const SEGUIMIENTO: ItemNav[] = [
   { titulo: "Alertas", url: "/alertas", icono: <BellRingIcon /> },
+  { titulo: "Avisos por WhatsApp", url: "/avisos", icono: <MessageCircleIcon /> },
   { titulo: "Revisión del lunes", url: "/revision", icono: <CalendarCheckIcon /> },
 ]
 

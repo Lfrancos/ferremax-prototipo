@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 
 const DESCRIPCION: Record<Area, string> = {
   Crédito: "Quién aprueba, la ficha, el reloj de 24 h, los casos resueltos y los indicadores del lunes.",
+  Avisos: "Cuándo y cómo se le avisa por WhatsApp a quien aprueba, y cómo decide respondiendo el mismo mensaje.",
   Bodega: "Cómo entra un pedido a la lista, en qué orden sale y cuándo está tarde.",
   Transporte: "Qué se revisa cuando sale de bodega, cuándo está en camino y qué evidencia confirma la entrega.",
   Proyecto: "La meta del proyecto Pedido a crédito · de 10 a 5 días.",

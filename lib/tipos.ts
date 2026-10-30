@@ -37,6 +37,24 @@ export interface Evento {
   motivo?: string
   /** En "evidencia_recibida": el mensaje de la transportadora al que corresponde. */
   ref?: string
+  /** Por dónde se dio la decisión, si no fue en la app. */
+  via?: "WhatsApp"
+}
+
+/**
+ * Un mensaje del chat de WhatsApp entre Ferremax y quien aprueba, que NO se calcula solo:
+ * lo que escribe la persona y lo que le contesta el sistema. Los avisos (inicial, recordatorios)
+ * sí se calculan con la regla NOT-1 (lib/notificaciones.ts).
+ */
+export interface MensajeWhatsApp {
+  id: string
+  fecha: FechaHora
+  persona: Persona
+  /** "entrada": la persona le escribe a Ferremax. "salida": Ferremax le contesta. */
+  sentido: "entrada" | "salida"
+  texto: string
+  /** Pedido al que responde (en WhatsApp real: el mensaje citado). */
+  id_pedido: string | null
 }
 
 export type Segmento = "Constructora" | "Contratista eléctrico" | "Industria" | "Minera"
@@ -200,6 +218,8 @@ export interface Pedido extends PedidoRegistro {
   dias_atraso: number | null
   /** Documento de la factura vencida más antigua, si hay. */
   factura_mas_antigua: string | null
+  /** Saldo abierto de las facturas ya vencidas (CART-5). null = en blanco. */
+  saldo_vencido_cop: number | null
   /** Pagos del cliente que cartera aún no aplica (CART-4). */
   pago_sin_aplicar_cop: number
   antiguedad_anios: number

@@ -4,7 +4,18 @@ import { createContext, useContext, useMemo, useReducer, useState, type ReactNod
 import { CARTERA_INICIAL, CLIENTES, HOY, MENSAJES_INICIALES, PEDIDOS } from "./data"
 import { describirMensaje, pedidoDelMensaje } from "./evidencia"
 import { cambiarNumero, numeroDe, restaurarNumeros } from "./rules"
-import type { Cliente, CorteCartera, Despacho, Evento, FechaHora, MensajeTransporte, Pedido, PedidoRegistro, Persona } from "./tipos"
+import type {
+  Cliente,
+  CorteCartera,
+  Despacho,
+  Evento,
+  FechaHora,
+  MensajeTransporte,
+  MensajeWhatsApp,
+  Pedido,
+  PedidoRegistro,
+  Persona,
+} from "./tipos"
 import { esperanEvidencia, estadoDeEventos, tramoDe, unirPedidos } from "./vistas"
 
 // Estado local de la sesión. Arranca con CLIENTES, PEDIDOS y MENSAJES de lib/data.ts y solo
@@ -28,6 +39,7 @@ interface Datos {
   clientes: Cliente[]
   cartera: CorteCartera
   mensajes: MensajeTransporte[]
+  whatsapp: MensajeWhatsApp[]
   cambios: CambioRegla[]
 }
 
@@ -36,13 +48,14 @@ type Accion =
   | { tipo: "despachar"; id: string; evento: Evento; despacho: Despacho }
   | { tipo: "mensaje"; mensaje: MensajeTransporte }
   | { tipo: "asociarMensaje"; id: string; id_pedido: string }
+  | { tipo: "whatsapp"; mensajes: MensajeWhatsApp[] }
   | { tipo: "agregarCliente"; cliente: Cliente }
   | { tipo: "agregarPedidos"; registros: PedidoRegistro[] }
   | { tipo: "reemplazarCartera"; cartera: CorteCartera }
   | { tipo: "cambioRegla"; cambio: CambioRegla }
   | { tipo: "reiniciar" }
 
-const INICIO: Datos = { registros: PEDIDOS, clientes: CLIENTES, cartera: CARTERA_INICIAL, mensajes: MENSAJES_INICIALES, cambios: [] }
+const INICIO: Datos = { registros: PEDIDOS, clientes: CLIENTES, cartera: CARTERA_INICIAL, mensajes: MENSAJES_INICIALES, whatsapp: [], cambios: [] }
 
 /** Un mensaje asociado a un pedido que va en camino lo da por entregado y deja su constancia en el historial. */
 function conMensaje(registros: PedidoRegistro[], m: MensajeTransporte): PedidoRegistro[] {
@@ -80,6 +93,8 @@ function reducir(d: Datos, a: Accion): Datos {
         registros: conMensaje(d.registros, asociado),
       }
     }
+    case "whatsapp":
+      return { ...d, whatsapp: [...d.whatsapp, ...a.mensajes] }
     case "agregarCliente":
       return { ...d, clientes: [...d.clientes, a.cliente] }
     case "agregarPedidos":
@@ -103,6 +118,8 @@ interface Prototipo {
   cartera: CorteCartera
   /** Todo lo que ha escrito la transportadora, también lo que todavía no se asocia a un pedido. */
   mensajes: MensajeTransporte[]
+  /** Lo que se han escrito en el chat de WhatsApp quienes aprueban y el sistema (sin los avisos, que se calculan). */
+  whatsapp: MensajeWhatsApp[]
   cambios: CambioRegla[]
   registrar: (id: string, evento: Evento) => void
   /** Nelson entrega el pedido a transporte: queda el registro de lo cargado y el evento que cierra el reloj de bodega. */
@@ -110,6 +127,8 @@ interface Prototipo {
   /** Llega un mensaje de la transportadora. Devuelve el pedido al que se asoció, o null si quedó sin pedido. */
   recibirMensaje: (m: MensajeNuevo) => { id: string; id_pedido: string | null }
   asociarMensaje: (id: string, id_pedido: string) => void
+  /** Agrega mensajes al chat de WhatsApp. El id y el orden los pone el almacén. */
+  escribirWhatsApp: (mensajes: Omit<MensajeWhatsApp, "id">[]) => void
   agregarCliente: (cliente: Cliente) => void
   /** Solicitudes nuevas: importadas de SAP o creadas en la app. */
   agregarPedidos: (registros: PedidoRegistro[]) => void
@@ -142,6 +161,7 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
     clientes: datos.clientes,
     cartera: datos.cartera,
     mensajes: datos.mensajes,
+    whatsapp: datos.whatsapp,
     cambios: datos.cambios,
     reemplazarCartera: (cartera) => dispatch({ tipo: "reemplazarCartera", cartera }),
     registrar: (id, evento) => dispatch({ tipo: "registrar", id, evento }),
@@ -154,6 +174,11 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
       return { id, id_pedido }
     },
     asociarMensaje: (id, id_pedido) => dispatch({ tipo: "asociarMensaje", id, id_pedido }),
+    escribirWhatsApp: (nuevos) =>
+      dispatch({
+        tipo: "whatsapp",
+        mensajes: nuevos.map((m, i) => ({ ...m, id: `WA-${String(datos.whatsapp.length + i + 1).padStart(3, "0")}` })),
+      }),
     agregarCliente: (cliente) => dispatch({ tipo: "agregarCliente", cliente }),
     agregarPedidos: (registros) => dispatch({ tipo: "agregarPedidos", registros }),
     editarRegla: (regla, clave, nuevo, motivo) => {

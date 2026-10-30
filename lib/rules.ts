@@ -1,4 +1,4 @@
-import { aLaHora, diaDeSemana, diasCalendario, esAntes, soloFecha, sumarDias } from "./fechas"
+import { aLaHora, diaDeSemana, diasCalendario, esAntes, soloFecha, sumarDias, sumarHoras } from "./fechas"
 import { fmtCOP } from "./formato"
 import {
   VENDEDORES,
@@ -19,8 +19,8 @@ import {
 
 // ── Documentos, áreas y dueños ──────────────────────────────────────────────────
 
-export type Area = "Crédito" | "Bodega" | "Transporte" | "Proyecto" | "Sistema"
-export const AREAS: Area[] = ["Crédito", "Bodega", "Transporte", "Proyecto", "Sistema"]
+export type Area = "Crédito" | "Avisos" | "Bodega" | "Transporte" | "Proyecto" | "Sistema"
+export const AREAS: Area[] = ["Crédito", "Avisos", "Bodega", "Transporte", "Proyecto", "Sistema"]
 
 export interface Documento {
   nombre: string
@@ -64,6 +64,13 @@ export const DOCUMENTOS = {
     ruta: "Ningún documento de empresa\\ todavía",
     nota: "Salen del pedido para esta demo. No están escritos en ningún documento: [por definir] quién es su dueño. El transporte a la obra queda fuera del Ops Charter.",
   },
+  avisos: {
+    nombre: "Avisos por WhatsApp al aprobador (pedido para la demo)",
+    area: "Avisos",
+    dueno: "Marcela Ríos",
+    ruta: "Ningún documento de empresa\\ todavía",
+    nota: "Salen del pedido para esta demo. Se propone a Marcela como dueña porque lleva el seguimiento del reloj, pero Andrés es el dueño de la Política (CRED-3.1) que ya habla de un aviso a las 12 h: [por confirmar] con los dos.",
+  },
   diccionario: {
     nombre: "Diccionario de datos",
     area: "Crédito",
@@ -97,7 +104,7 @@ export type Fuente = "Política escrita" | "Regla de Marcela" | "Permiso del pro
 
 export interface Campo {
   etiqueta: string
-  unidad: "COP" | "días" | "h" | "%" | "años" | ""
+  unidad: "COP" | "días" | "h" | "%" | "años" | "veces" | ""
 }
 
 export interface Regla<F extends (...args: never[]) => unknown = (...args: never[]) => unknown> {
@@ -129,6 +136,7 @@ const V_ATRASO = { max_dias: 30 }
 const V_CLIENTE_NUEVO = { min_anios: 2 }
 const V_RELOJ_APROBACION = { aviso_h: 12, tope_h: 24 }
 const V_FECHA_LIMITE = { dias: 4 }
+const V_AVISO = { reenvio_h: 6, max_recordatorios: 3, pausa_info_h: 12, escala_h: 20 }
 const V_RELOJ_BODEGA = { aviso_dia: 3 }
 const V_TRANSPORTE = { aviso_h: 24 }
 const V_A = { meta_pct: 80 }
@@ -209,6 +217,24 @@ export const PAGO_SIN_APLICAR = regla({
   seccion: "4 · Decidir (Entrevista a Andrés Molina, 28 de septiembre)",
   momentos: [1, 3],
   fn: (p: Pedido) => p.pago_sin_aplicar_cop > 0,
+})
+
+export const SALDO_VENCIDO = regla({
+  id: "CART-5",
+  titulo: "Saldo vencido",
+  texto:
+    "Suma del saldo abierto de las facturas que ya vencieron en el último corte de cartera. Es lo que se ve en la ficha de decisión como \"saldo vencido\"; no cambia ningún chequeo. Si una factura abierta llega sin saldo o sin vencimiento, queda en blanco.",
+  fuente: "Pedido del prototipo",
+  documento: DOCUMENTOS.prototipo,
+  seccion: "Ficha de decisión",
+  momentos: [2],
+  fn(partidas: PartidaAbierta[], hoy: FechaHora): number | null {
+    const facturas = abiertas(partidas)
+    if (facturas.some((p) => p.vencimiento === null || p.saldo_abierto_cop === null)) return null
+    return facturas
+      .filter((p) => esAntes(p.vencimiento!, soloFecha(hoy) + "T00:00"))
+      .reduce((s, p) => s + p.saldo_abierto_cop!, 0)
+  },
 })
 
 // ── Momento 1 y 2 · Los cuatro chequeos ─────────────────────────────────────────
@@ -477,6 +503,116 @@ export const RELOJ_APROBACION = regla({
     if (horas >= aviso_h)
       return { clase: "aviso", palabra: `Aviso ${aviso_h} h`, queHace: "Aviso al aprobador por mensaje, con la ficha", quien: "Rutina de seguimiento" }
     return { clase: "en-plazo", palabra: "En plazo", queHace: "Nada", quien: "—" }
+  },
+})
+
+// ── Momento 1 y 5 · Avisos por WhatsApp ─────────────────────────────────────────
+// Estas reglas salen del pedido para la demo. La Política (CRED-3.1) solo habla de un aviso a las
+// 12 h; aquí el aviso nace con la solicitud y se repite. Es el choque a resolver con Andrés.
+
+/**
+ * inicial · recordatorio: a quien aprueba.
+ * info: a quien consigue el dato cuando el aprobador pidió información.
+ * apoyo: a Sandra cuando solo Marcela decide y no responde.
+ * escalamiento: al que está por encima cuando nadie responde (Marcela si aprueba Andrés; Andrés si aprueban ellas).
+ */
+export type TipoEnvio = "inicial" | "recordatorio" | "info" | "apoyo" | "escalamiento"
+
+/** Quién queda por encima de quien aprueba. Sale de la tabla de CRED-1.1. */
+export type Cadena = "andres" | "marcela_o_sandra" | "marcela_sola"
+
+export interface Envio {
+  fecha: FechaHora
+  tipo: TipoEnvio
+  /** 0 para el inicial y el escalamiento; 1, 2, 3… para los recordatorios y los pedidos de información. */
+  n: number
+}
+
+/** Lo que hay que saber de un pedido para armar sus avisos: quién aprueba y cuándo se pidió información. */
+export interface ContextoAviso {
+  cadena: Cadena
+  infos: FechaHora[]
+}
+
+export const AVISO_WHATSAPP = regla({
+  id: "NOT-1",
+  titulo: "Aviso al aprobador por WhatsApp",
+  get texto() {
+    const { reenvio_h, max_recordatorios, pausa_info_h, escala_h } = V_AVISO
+    const { aviso_h, tope_h } = V_RELOJ_APROBACION
+    return `Apenas entra la solicitud, el sistema le escribe por WhatsApp a quien la aprueba, con la ficha y cómo responder. Si no hay decisión, le vuelve a escribir cada ${reenvio_h} horas, hasta ${max_recordatorios} veces. Si quien aprueba pide información, los recordatorios se pausan ${pausa_info_h} horas, Sandra recibe el aviso para conseguir el dato y el reloj de ${tope_h} horas no se detiene. Si aprueba Andrés, a las ${tope_h} horas se le avisa a Marcela para que llame (CRED-3.1). Si aprueban Marcela o Sandra, a las ${escala_h} horas se le avisa a Andrés que a las dos se les escribió y no hay respuesta. Si decide Marcela sola, a las ${aviso_h} horas también se le escribe a Sandra. Cuando alguien decide, los avisos paran. Los avisos salen de día y de noche: las horas son corridas. El sistema avisa. No aprueba.`
+  },
+  fuente: "Pedido del prototipo",
+  documento: DOCUMENTOS.avisos,
+  seccion: "Avisar",
+  momentos: [1, 5],
+  valores: V_AVISO,
+  campos: {
+    reenvio_h: { etiqueta: "Volver a avisar cada", unidad: "h" },
+    max_recordatorios: { etiqueta: "Máximo de recordatorios", unidad: "veces" },
+    pausa_info_h: { etiqueta: "Pausa al pedir información", unidad: "h" },
+    escala_h: { etiqueta: "Avisar a Andrés (si aprueban ellas) a las", unidad: "h" },
+  },
+  heredaDe: RELOJ_APROBACION.id,
+  /**
+   * Los avisos que tocan entre que la solicitud entra a la app y `hasta`.
+   * `solicitud` es cuando se registró (ahí empieza el reloj de aprobación y se cuentan los topes).
+   */
+  fn(entrada: FechaHora, hasta: FechaHora, solicitud: FechaHora = entrada, ctx: ContextoAviso = { cadena: "andres", infos: [] }): Envio[] {
+    const { reenvio_h, max_recordatorios, pausa_info_h, escala_h } = V_AVISO
+    const { aviso_h, tope_h } = V_RELOJ_APROBACION
+    const hecho = (f: FechaHora) => !esAntes(hasta, f)
+    const enPausa = (f: FechaHora) => ctx.infos.some((i) => !esAntes(f, i) && esAntes(f, sumarHoras(i, pausa_info_h)))
+    const envios: Envio[] = []
+    if (hecho(entrada)) envios.push({ fecha: entrada, tipo: "inicial", n: 0 })
+    for (let k = 1; reenvio_h > 0 && k <= max_recordatorios; k++) {
+      const f = sumarHoras(entrada, k * reenvio_h)
+      if (!hecho(f)) break
+      if (!enPausa(f)) envios.push({ fecha: f, tipo: "recordatorio", n: k })
+    }
+    ctx.infos.forEach((f, i) => {
+      if (hecho(f)) envios.push({ fecha: f, tipo: "info", n: i + 1 })
+    })
+    const apoyo = sumarHoras(solicitud, aviso_h)
+    if (ctx.cadena === "marcela_sola" && hecho(apoyo)) envios.push({ fecha: apoyo, tipo: "apoyo", n: 0 })
+    const escala = sumarHoras(solicitud, ctx.cadena === "andres" ? tope_h : escala_h)
+    if (hecho(escala)) envios.push({ fecha: escala, tipo: "escalamiento", n: 0 })
+    return envios.sort((a, b) => a.fecha.localeCompare(b.fecha))
+  },
+})
+
+export type AccionWhatsApp = "aprobado" | "rechazado" | "info_pedida"
+
+export type Interpretacion =
+  | { tipo: "decision"; accion: AccionWhatsApp; motivo: string }
+  | { tipo: "falta_motivo"; accion: AccionWhatsApp }
+  | { tipo: "no_entendido" }
+
+/** La palabra con la que empieza la respuesta. Un número solo vale si no sigue otra letra o cifra ("10 cajas" no es "1"). */
+const PALABRAS_RESPUESTA: { accion: AccionWhatsApp; inicio: RegExp }[] = [
+  { accion: "aprobado", inicio: /^(1|aprobar|aprobado|apruebo)(?![a-záéíóúñ0-9])[\s:,.\-–]*/i },
+  { accion: "rechazado", inicio: /^(2|rechazar|rechazado|rechazo)(?![a-záéíóúñ0-9])[\s:,.\-–]*/i },
+  { accion: "info_pedida", inicio: /^(3|info|informaci[oó]n|dato)(?![a-záéíóúñ0-9])[\s:,.\-–]*/i },
+]
+
+export const RESPUESTA_WHATSAPP = regla({
+  id: "NOT-2",
+  titulo: "Decidir respondiendo por WhatsApp",
+  texto:
+    "Quien aprueba responde en el mismo chat: 1 o APROBAR, 2 o RECHAZAR, 3 o INFO (pide información), seguido del motivo. Sin motivo no se registra: el sistema lo pide (CRED-4.3). Solo vale la respuesta de quien asigna la tabla (CRED-1.1) desde su celular registrado. La primera respuesta gana: a los demás se les dice quién resolvió. La decisión queda en el historial marcada \"por WhatsApp\" y el pedido sigue igual que si se hubiera firmado en la app.",
+  fuente: "Pedido del prototipo",
+  documento: DOCUMENTOS.avisos,
+  seccion: "Responder",
+  momentos: [3],
+  fn(texto: string): Interpretacion {
+    const t = texto.trim()
+    for (const { accion, inicio } of PALABRAS_RESPUESTA) {
+      const m = t.match(inicio)
+      if (!m) continue
+      const motivo = t.slice(m[0].length).trim()
+      return MOTIVO_ESCRITO.fn(motivo) ? { tipo: "decision", accion, motivo } : { tipo: "falta_motivo", accion }
+    }
+    return { tipo: "no_entendido" }
   },
 })
 
@@ -993,11 +1129,14 @@ export const REGLAS: Regla[] = [
   DIAS_DE_ATRASO,
   CRUCE_DEL_LIMITE,
   PAGO_SIN_APLICAR,
+  SALDO_VENCIDO,
   ASIGNAR_APROBADOR,
   ...CHEQUEOS,
   DATO_FALTANTE,
   FICHA,
   RELOJ_APROBACION,
+  AVISO_WHATSAPP,
+  RESPUESTA_WHATSAPP,
   FUERA_DE_REGLA,
   NINGUNA_REGLA_CUBRE,
   MOTIVO_ESCRITO,
@@ -1038,6 +1177,7 @@ const NUMEROS: Record<string, Record<string, number>> = {
   [CHEQUEO_ATRASO.id]: V_ATRASO,
   [CHEQUEO_CLIENTE_NUEVO.id]: V_CLIENTE_NUEVO,
   [RELOJ_APROBACION.id]: V_RELOJ_APROBACION,
+  [AVISO_WHATSAPP.id]: V_AVISO,
   [FECHA_LIMITE.id]: V_FECHA_LIMITE,
   [RELOJ_BODEGA.id]: V_RELOJ_BODEGA,
   [RELOJ_TRANSPORTE.id]: V_TRANSPORTE,
@@ -1063,6 +1203,9 @@ export function validarNumero(id: string, clave: string, valor: number): string 
     const otro = { ...V_RELOJ_APROBACION, [clave]: valor }
     if (otro.aviso_h >= otro.tope_h) return "El aviso tiene que llegar antes del tope."
   }
+  if (id === AVISO_WHATSAPP.id && clave === "max_recordatorios" && valor > 20) return "Hasta 20 recordatorios."
+  if (id === AVISO_WHATSAPP.id && clave !== "max_recordatorios" && (valor < 1 || valor > V_RELOJ_APROBACION.tope_h))
+    return `Va de 1 hora al tope de aprobación (${V_RELOJ_APROBACION.tope_h} h).`
   if (id === RELOJ_BODEGA.id && valor >= V_FECHA_LIMITE.dias) return "El aviso tiene que llegar antes del día límite."
   if (id === FECHA_LIMITE.id && valor <= V_RELOJ_BODEGA.aviso_dia) return "El día límite tiene que ser después del día del aviso."
   if (clave.startsWith("meta_pct") && valor > 100) return "Un porcentaje va de 0 a 100."

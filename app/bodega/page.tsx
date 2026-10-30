@@ -5,7 +5,7 @@ import { CargaBodega } from "@/components/ferremax/carga-bodega"
 import { BotonEntregar } from "@/components/ferremax/entregar"
 import { Estado } from "@/components/ferremax/estado"
 import { ReglaBoton } from "@/components/ferremax/insignia"
-import { Bloque, Titulo } from "@/components/ferremax/piezas"
+import { Bloque, PorDefinir, Titulo } from "@/components/ferremax/piezas"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { hrefRemision } from "@/lib/documentos"
 import { remisionDe } from "@/lib/evidencia"
@@ -117,6 +117,11 @@ export default function Bodega() {
           <p className="text-[15px]">
             Alista y despacha en el orden de la lista. El orden no lo cambia nadie a mano: lo dicen{" "}
             <span className="dato">{ENTRADA_A_LA_FILA.id}</span> y <span className="dato">{ORDEN_DE_LA_FILA.id}</span>.
+          </p>
+          <p className="mt-3 text-[15px]">
+            <strong className="font-medium">La prioridad no la decide una persona.</strong> Sale de la fecha límite (<span className="dato">{FECHA_LIMITE.id}</span>): como
+            todo el crédito tiene los mismos {FECHA_LIMITE.valores!.dias} días, en la práctica va primero el que se aprobó primero. Andrés
+            decide el crédito, no el orden. Si una obra está parada, Marcela decide y lo anota; la app todavía no tiene dónde anotarlo <PorDefinir />.
           </p>
           <p className="mt-3 text-[15px]">
             Al entregar a transporte anota lo que cargó, línea por línea. Si falta algo sale incompleto y se avisa.{" "}

@@ -3,7 +3,7 @@
 Prototipo **no funcional** para mostrar a los mentores del curso 30X hacia dónde va el curso: una herramienta pequeña que cuida el pedido a crédito desde la solicitud hasta la salida de bodega, con topes de tiempo.
 
 - Sin backend, sin base de datos, sin autenticación y sin llamadas a APIs ni a LLMs.
-- Datos ficticios en un solo archivo. Las acciones solo cambian el estado local. Al recargar todo vuelve a empezar; también se reinicia con "Reiniciar demo" en el sidebar.
+- Datos ficticios en un solo archivo. Las acciones solo cambian el estado local. Nada sale a WhatsApp de verdad. Al recargar todo vuelve a empezar; también se reinicia con "Reiniciar demo" en el sidebar.
 - Interfaz en español de Colombia, en tema claro y oscuro.
 - Base visual: el bloque `dashboard-01` de shadcn/ui (sidebar, tarjetas, gráfico y tabla), con los colores y la tipografía del Sistema de diseño de Ferremax.
 
@@ -18,12 +18,12 @@ Abre http://localhost:3000. Si el puerto está ocupado, Next usa el siguiente (3
 
 ## Mapa de pantallas
 
-El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Solicitudes, Tablero de pedidos, Bodega, Transporte) · **Seguimiento** (Alertas, Revisión del lunes) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
+El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Cargar pedidos, Tablero de pedidos, Bodega, Transporte) · **Seguimiento** (Alertas, **Avisos por WhatsApp**, Revisión del lunes) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
 
 | Ruta | Momento | Qué muestra |
 |---|---|---|
 | `/como-funciona` | Los 8 | Abre la presentación. Primero, "Antes del momento 1": las dos opciones para que entre la solicitud. Después, los 6 momentos hasta la salida de bodega con su tipo, quién decide, sus reglas y dónde viven, y los dos topes. Al final, el transporte (momentos 7 y 8). |
-| `/solicitudes` | Antes del 1 | **Opción A · Satélite:** importar el archivo diario de SAP (formato, ejemplo descargable, revisión fila por fila). **Opción B · Solución completa:** el vendedor crea la solicitud y ve quién la aprueba, qué fecha puede prometer y la carga de bodega. |
+| `/solicitudes` (menú: **Cargar pedidos**) | Antes del 1 | Los pedidos entran por un archivo: se sube el CSV de SAP o de Excel y cada fila es un pedido por aprobar. **Opción A · Satélite:** importar el archivo diario de SAP (formato, ejemplo descargable, revisión fila por fila). **Opción B · Solución completa:** el vendedor crea la solicitud y ve quién la aprueba, qué fecha puede prometer y la carga de bodega. |
 | `/` | Todos | Tablero: 5 tarjetas (incluye **En camino**) que **filtran la tabla** al pulsarlas (Por aprobar, Cerca del tope, Fuera de tope, En camino; "% a tiempo" abre la revisión), un gráfico de pedidos abiertos por día y la tabla de pedidos con pestañas por tramo (Aprobar, Alistar y despachar, **En camino**, Cerrados) y por tope (Cerca del tope, Fuera de tope), con una columna **Tiempo total**. Cada fila tiene una flecha que despliega su historial y el botón **Aprobar** cuando la regla deja firmar al rol. |
 | `/clientes` | 1 | Base de clientes (maestro de SAP). Sandra crea clientes; Nelson y los vendedores ven solo los nombres. |
 | `/cartera` | 1, 2, 5 | Informe de cartera: el corte vigente, cuándo cruza cada cliente los 30 días de atraso, los pagos sin aplicar, el importador del corte de SAP con vista previa de lo que cambia, y las partidas abiertas. |
@@ -32,6 +32,7 @@ El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (
 | `/transporte` | 7 y 8 | Qué va en camino, qué salió incompleto, qué entregas tienen alerta y cuáles están confirmadas. Las dos opciones para que llegue la evidencia (chat de WhatsApp o enlace por entrega), con una simulación de lo que manda el conductor. |
 | `/remisiones/[id]` | 4, 7 y 8 | La remisión de un pedido como se vería, las fotos firmadas que subió el conductor y **qué pasó con ella**: cuándo la generó SAP, cuándo entró a la lista, quién la entregó a transporte, cuándo llegó la foto firmada y qué leyó Claude. Se llega desde la ficha, el tablero (fila desplegada), Bodega y Transporte. |
 | `/facturas/[id]` | Después de 8 | La factura como se vería y **qué pasó con ella**: quién la emitió, firma electrónica, DIAN, envío, acuse del cliente, corte de cartera y vencimiento. Se llega desde la ficha, el tablero y `/cartera`. |
+| `/avisos` | 1, 3 y 5 | **Avisos por WhatsApp (simulados).** Cuándo avisa el sistema (al entrar y cada 6 h), qué pedidos esperan decisión y cuándo les toca el próximo aviso, con un **reloj de ensayo** (+1 h, +6 h, +12 h) para ver los recordatorios. Un celular simulado por aprobador (Andrés, Marcela, Sandra) donde se responde `1 Aprobar`, `2 Rechazar` o `3 Info` más el motivo, y la decisión queda en el pedido. |
 | `/alertas` | 5 | Rutina diaria: qué está cerca del tope o fuera de tope en cada tramo, el tramo En camino (sin confirmar, evidencia con alerta, salidas incompletas) y borradores de aviso (propuesta IA). |
 | `/revision` | 6 | Revisión del lunes: A, B, C, % a tiempo, fuera de tope por tramo, listas y resumen narrativo (propuesta IA). |
 | `/reglas` | Todos | Las reglas con una pestaña por área: **Todas** (agrupadas por área) o solo una (Crédito, Bodega, Transporte, Proyecto, Sistema), con su dueño. |
@@ -128,6 +129,37 @@ Cada pedido enlaza a su remisión y a su factura (ficha, fila desplegada del tab
 - **Factura.** La emite SAP (aquí figura Sandra Beltrán), la firma electrónicamente con el certificado de Ferremax (no una persona), la valida la DIAN y se envía al cliente, que responde con un acuse. **Nadie la sube a la app:** se entera por el corte de partidas abiertas que Sandra importa (`PER-7`). Valor y saldo se ocultan a quien no ve crédito (`PER-1`). Esa parte de la historia (`HITOS_FACTURA` en `lib/data.ts`) es lo que reportaría SAP: está inventada para 4 facturas; las demás solo muestran lo que trae el corte.
 - Hoy solo los pedidos entregados de la demo tienen factura; la de `PED-2026-03092` se emitió con la entrega en alerta, y la historia lo dice.
 
+## Ficha de decisión, avisos por WhatsApp y prioridad de bodega
+
+**Ficha de decisión** (`/pedidos/[id]`, bloque 2). Además de las cinco líneas de la Política trae lo que pide el ejemplo de la sesión 9: **cupo autorizado, cupo disponible, saldo vencido** (`CART-5`), la **condición** que manda el pedido a revisión ("Excede cupo disponible", "Atraso de 45 días"…) y una frase de **información para decidir**: "El pedido supera el cupo disponible en COP 6.000.000. Existe cartera vencida de COP 8.000.000." Sale de los mismos chequeos de siempre (`resumenDecision` en `lib/vistas.ts`); no cambia quién aprueba. Los botones son los de siempre: Aprobar, Rechazar y **Pedir información** (la "Solicitar revisión" del ejemplo).
+
+**Avisos por WhatsApp** (`/avisos`, simulado). Dos reglas nuevas en el área **Avisos**, con el número editable en `/reglas`:
+- `NOT-1 · Aviso al aprobador`: apenas la solicitud entra a la app, el sistema le escribe a quien la aprueba, con la ficha y cómo responder. Si no hay decisión, vuelve a escribir **cada 6 h, máximo 3 veces**. Los avisos salen también de noche. Quién sigue si no responde:
+  - **Aprueba Andrés:** a las 24 h (el tope de `CRED-3.1`) se le avisa a Marcela para que llame.
+  - **Aprueban Marcela o Sandra:** a las dos se les escribe desde el inicio. A las **20 h** se le avisa a Andrés: "se le avisó a Marcela y a Sandra y no hay respuesta; necesitamos una respuesta hoy".
+  - **Decide Marcela sola** (o falta un dato): a las 12 h se le escribe también a Sandra para que le ayude a ubicarla, y a las 20 h a Andrés, con el mismo mensaje.
+  - **Pedir información (3):** los recordatorios de quien pidió se pausan 12 h y Sandra recibe el aviso para conseguir el dato. El reloj de 24 h no se detiene: el cliente sigue esperando.
+  - Cuando alguien decide, los avisos paran y a todos los demás que se avisó se les dice quién fue. Los cuatro números (6 h, 3 veces, 12 h de pausa, 20 h) se editan en `/reglas`.
+- `NOT-2 · Decidir respondiendo por WhatsApp`: se responde en el mismo chat con `1` o `aprobar`, `2` o `rechazar`, `3` o `info`, y el motivo. Sin motivo no se registra (`CRED-4.3`). Solo vale la respuesta de quien asigna la tabla (`CRED-1.1`, `PER-4`). Si Marcela y Sandra pueden aprobar, la primera respuesta gana y a la otra se le dice quién resolvió. La decisión queda en el historial como "por WhatsApp" y el pedido pasa a bodega igual que si se hubiera firmado en la app.
+- **Cómo probarlo:** en **Cargar pedidos** usa "Usar el ejemplo de hoy" e importa. En **Avisos por WhatsApp** abre el celular de Andrés, responde `1` solo (pide el motivo) y luego `1 Cliente al día, cabe en el cupo`. Pulsa **+6 h** para ver salir los recordatorios. Cambia al celular de Sandra para ver el cierre.
+- El reloj de ensayo solo mueve esa pantalla; el resto de la app sigue en la hora fija de hoy.
+
+**Prioridad de bodega: no la decide una persona.** Sale de dos reglas: `BOD-3.1` (fecha límite = listo desde + 4 días calendario) y `BOD-3.2` (la fila se ordena por fecha límite; desempate: más horas listo, luego número de pedido). Andrés decide el crédito, no el orden. Como todo el crédito tiene los mismos 4 días, **en la práctica va primero el que se aprobó primero**: no hay prioridad por cliente, valor ni urgencia. Hay una sola excepción escrita: si la obra de verdad está parada, Marcela decide y lo anota, y la app todavía no tiene dónde anotarlo.
+
+### Del prototipo a la app real
+
+Lo que ya está escrito y se reutiliza igual, sin React ni estado: `lib/rules.ts` (las reglas) y `lib/notificaciones.ts` (cuándo avisar, qué texto, cómo leer la respuesta). Lo que cambia:
+
+| En el prototipo | En la app real |
+|---|---|
+| `lib/store.tsx` guarda todo en memoria | Base de datos: clientes, pedidos con sus eventos, partidas de cartera, mensajes de WhatsApp, cambios de reglas |
+| Los avisos se recalculan al pintar la pantalla | Un proceso que corre cada minuto llama a `avisosDe`, manda lo que falta por Baileys y **guarda lo enviado** para no repetir |
+| El celular simulado de `/avisos` | El evento de mensaje recibido de Baileys: se acepta solo de los celulares registrados, el mensaje citado dice de qué pedido es y se lee con `resolverRespuesta` |
+| El CSV se lee en el navegador (`lib/importar.ts`) | Misma lectura y revisión, pero en el servidor, y el archivo queda guardado |
+| `HOY` fijo | La hora real |
+
+Baileys no es una API oficial de WhatsApp (funciona como WhatsApp Web) y Meta puede bloquear un número que lo use; la alternativa oficial es WhatsApp Business. Es una decisión para los mentores.
+
 ## Cómo está armado
 
 ```
@@ -138,6 +170,7 @@ lib/store.tsx      Estado de la sesión: arranca con data.ts y solo agrega event
 lib/propuestas.ts  Textos de "Propuesta IA" armados con plantillas. No deciden nada
 lib/importar.ts    Opción A: formato del archivo de SAP, lectura del CSV y revisión fila por fila
 lib/importar-cartera.ts  Corte de cartera: columnas, lectura y revisión de las partidas abiertas
+lib/notificaciones.ts  Avisos por WhatsApp: a quién, cuándo, qué texto y cómo se lee la respuesta (sin enviar nada)
 lib/lineas.ts      Detalle de las líneas de cada pedido (producto y cantidad pedida) para comparar con lo cargado
 lib/evidencia.ts   Mensajes de la transportadora: conductores, lectura de las fotos (IA de muestra), asociación al pedido y escenarios
 lib/documentos.ts  Historia de la remisión y de la factura de un pedido (qué pasó, cuándo, quién)
@@ -206,6 +239,15 @@ Ningún documento lo dice, así que el prototipo no lo inventa:
 32. **Facturas:** quién la emite. La demo pone a Sandra Beltrán; ningún documento lo dice.
 33. **Remisión:** si la hoja firmada original se archiva en papel además de la foto, y cuánto tiempo se guarda cada una.
 34. **Precios por línea:** la factura de la demo no los muestra porque no están en los datos.
+35. **Avisos · choque con la Política:** `CRED-3.1` (de Andrés) habla de un aviso a las 12 h. `NOT-1` avisa al entrar y cada 6 h, así que el de las 12 h pasa a ser el segundo recordatorio. Hay que confirmarlo con Andrés. El dueño propuesto de las reglas de Avisos es Marcela; ningún documento lo dice.
+36. **Avisos · de noche:** decidido para la demo: los avisos salen también de madrugada (las horas son corridas). Confirmar con quienes los reciben.
+37. **Avisos · cuántas veces insistir:** decidido para la demo: máximo 3 recordatorios por persona (6, 12 y 18 h); después se escala y no se le insiste más. Número editable en `NOT-1`.
+38. **Avisos · "Pedir información":** decidido para la demo: pausa 12 h los recordatorios de quien pidió, avisa a Sandra y **no detiene el reloj de 24 h**. Falta una forma de registrar que la información llegó (hoy no hay ese evento): sin eso, la pausa es por tiempo.
+39. **Avisos · escalamiento:** decidido para la demo: Marcela si aprueba Andrés (24 h); Andrés si aprueban ellas (20 h), con el aviso de que a las dos se les escribió. Queda abierto si Andrés puede firmar en su lugar: hoy no, por `PER-4`.
+40. **Avisos · quién escribe:** número de WhatsApp de Ferremax, su costo y quién lo paga; si se usa Baileys o la API oficial; qué hace el sistema con un mensaje de un número que no es de un aprobador.
+41. **Ficha de decisión:** la Política dice cinco líneas (`CRED-2.6`); la del ejemplo de la sesión 9 suma cupo disponible, saldo vencido y condición. El prototipo muestra las cinco más tres. La frase "revisar si procede una excepción, un pago previo o un ajuste de condiciones" no está en ninguna regla.
+42. **Prioridad de bodega:** dónde se anota que Marcela adelantó un pedido porque la obra está parada, y qué pasa con el orden cuando ella lo hace (`BOD-3.2`).
+43. **Cargar pedidos:** el CSV trae pedidos, pero no el detalle por línea ni el inventario. Los otros archivos del flujo (clientes, aprobaciones, reglas) todavía no se cargan por CSV: clientes se crean a mano, las aprobaciones se dan en la app y las reglas viven en `lib/rules.ts`.
 
 ## Supuestos de la demo
 

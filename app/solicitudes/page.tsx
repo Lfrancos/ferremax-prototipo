@@ -15,18 +15,18 @@ export default function Solicitudes() {
   return (
     <>
       <Titulo
-        indice="(000) Llega la solicitud"
-        titulo="¿Por dónde entra la solicitud?"
-        bajada="Dos opciones para discutir. En las dos, apenas entra, la regla del momento 1 dice quién aprueba y arranca el reloj."
+        indice="(000) Cargar pedidos"
+        titulo="Los pedidos entran por un archivo"
+        bajada="Aquí se sube un archivo CSV (el que sale de SAP o de Excel). Cada fila es un pedido por aprobar: apenas entra, la regla del momento 1 dice quién aprueba, arranca el reloj y se le avisa por WhatsApp. Crear un pedido a mano queda como alternativa a discutir."
       />
       {/* key={rol}: al cambiar de rol se abre la pestaña de ese rol */}
       <Tabs key={rol} defaultValue={CREAR_SOLICITUD.fn(rol) ? "crear" : "importar"} className="gap-6">
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="importar" className="px-4 py-2 text-[15px]">
-            Opción A · Satélite: importar de SAP
+            Subir un archivo CSV
           </TabsTrigger>
           <TabsTrigger value="crear" className="px-4 py-2 text-[15px]">
-            Opción B · Solución completa: crear en la app
+            Crear un pedido a mano
           </TabsTrigger>
         </TabsList>
         <TabsContent value="importar">
