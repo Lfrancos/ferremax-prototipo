@@ -5,8 +5,9 @@ import type { Pedido } from "./tipos"
 import { alertas, alertasTransporte, asignacion, fechaSolicitud, listaDeAlistamiento, relojAprobacion, revisionSemanal } from "./vistas"
 
 // PROPUESTAS IA (para discutir con los mentores).
-// Estos textos se arman con plantillas sobre los mismos datos y reglas.
-// En la versión real los redactaría Claude. Ninguno aprueba, rechaza ni prioriza.
+// Estos textos se arman con plantillas sobre los mismos datos y reglas. Ninguno aprueba, rechaza ni prioriza.
+// La nota de contexto y el resumen de la semana ya los redacta Claude (lib/agentes/ficha.ts y reporte.ts);
+// estas plantillas quedan como lo que entregan esos agentes en modo ensayo. El borrador de aviso sigue siendo plantilla.
 
 /** Momento 2 · Nota de contexto junto a la ficha. */
 export function notaDeContexto(p: Pedido, pedidos: Pedido[]) {

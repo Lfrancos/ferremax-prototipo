@@ -57,7 +57,18 @@ export interface MensajeWhatsApp {
   id_pedido: string | null
 }
 
-export type Segmento = "Constructora" | "Contratista eléctrico" | "Industria" | "Minera"
+/** Un cambio de número en una regla, hecho por su dueño desde /reglas. */
+export interface CambioRegla {
+  regla: string
+  clave: string
+  antes: number
+  despues: number
+  quien: Persona
+  fecha: FechaHora
+  motivo: string
+}
+
+export type Segmento ="Constructora" | "Contratista eléctrico" | "Industria" | "Minera"
 export type Sede = "Bogotá" | "Medellín" | "Cali"
 
 export const SEGMENTOS: Segmento[] = ["Constructora", "Contratista eléctrico", "Industria", "Minera"]

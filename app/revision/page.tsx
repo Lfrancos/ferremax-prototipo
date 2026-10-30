@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Estado } from "@/components/ferremax/estado"
-import { Bloque, Kpi, NotaPropuesta, PorDefinir, Titulo } from "@/components/ferremax/piezas"
+import { Bloque, Kpi, PorDefinir, Titulo } from "@/components/ferremax/piezas"
 import { EstadoPedido } from "@/components/ferremax/estado-pedido"
+import { ReporteDeLaSemana } from "@/components/ferremax/reporte-semana"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtRango } from "@/lib/fechas"
 import { tramos } from "@/lib/flujo"
 import { fmtCOP, fmtHoras, fmtPct } from "@/lib/formato"
-import { resumenSemana } from "@/lib/propuestas"
 import {
   A_TIEMPO,
   CASO_4,
@@ -73,7 +73,6 @@ const configGrafico = { horas: { label: "Horas de espera", color: "var(--chart-1
 export default function Revision() {
   const { pedidos } = usePrototipo()
   const r = revisionSemanal(pedidos)
-  const resumen = resumenSemana(pedidos)
   const tope = RELOJ_APROBACION.valores!.tope_h
   const [tramoAprobar, tramoBodega] = tramos()
   const pct = (v: number | null) => (v === null ? <PorDefinir>[sin dato]</PorDefinir> : fmtPct(v))
@@ -90,6 +89,10 @@ export default function Revision() {
         titulo={`Semana del ${fmtRango(r.desde, r.hasta)}`}
         bajada={`${r.semana.length} solicitudes de crédito · La revisan Marcela, Andrés y Nelson.`}
       />
+
+      <div className="mb-6">
+        <ReporteDeLaSemana />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <Bloque titulo="Indicadores" tipos={["regla"]} reglas={[INDICADOR_A.id, INDICADOR_B.id, INDICADOR_C.id, A_TIEMPO.id]} pie="Fuente: Revisión semanal de crédito y Ops Charter · Pedido a crédito (v2). Las cifras con marcador no cumplen la meta.">
@@ -173,30 +176,19 @@ export default function Revision() {
           </ChartContainer>
         </Bloque>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Bloque titulo="Andrés ve, para estar al tanto" tipos={["regla"]} reglas={[CASO_4.id]} pie={`${CASO_4.titulo}. Los ve, no los aprueba.`}>
-            <ul className="divide-y divide-linea border-y border-linea">
-              {r.paraVerAndres.map((p) => (
-                <li key={p.id_pedido} className="flex items-center justify-between gap-3 py-2.5 text-[15px]">
-                  <span>
-                    <span className="dato mr-2">{p.id_pedido}</span>
-                    {p.cliente}
-                  </span>
-                  {aprobacion(p) ? <Estado clase="aprobado" palabra={`Aprobó ${aprobo(p)}`} /> : <EstadoPedido pedido={p} />}
-                </li>
-              ))}
-            </ul>
-          </Bloque>
-
-          <Bloque titulo="Resumen narrativo de la semana" tipos={["propuesta"]}>
-            <NotaPropuesta />
-            <div className="flex flex-col gap-2 text-[15px]">
-              {resumen.map((l) => (
-                <p key={l}>{l}</p>
-              ))}
-            </div>
-          </Bloque>
-        </div>
+        <Bloque titulo="Andrés ve, para estar al tanto" tipos={["regla"]} reglas={[CASO_4.id]} pie={`${CASO_4.titulo}. Los ve, no los aprueba.`}>
+          <ul className="divide-y divide-linea border-y border-linea">
+            {r.paraVerAndres.map((p) => (
+              <li key={p.id_pedido} className="flex items-center justify-between gap-3 py-2.5 text-[15px]">
+                <span>
+                  <span className="dato mr-2">{p.id_pedido}</span>
+                  {p.cliente}
+                </span>
+                {aprobacion(p) ? <Estado clase="aprobado" palabra={`Aprobó ${aprobo(p)}`} /> : <EstadoPedido pedido={p} />}
+              </li>
+            ))}
+          </ul>
+        </Bloque>
       </div>
     </>
   )

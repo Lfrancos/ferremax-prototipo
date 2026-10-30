@@ -1,5 +1,6 @@
 "use client"
 
+import { DE_CREDITO } from "@/lib/actividad"
 import { fmtFechaHora } from "@/lib/fechas"
 import { VER_INFO_CREDITO } from "@/lib/rules"
 import { usePrototipo } from "@/lib/store"
@@ -8,9 +9,6 @@ import { cn } from "@/lib/utils"
 import { NOMBRE_ACCION } from "@/lib/vistas"
 import { Estado } from "./estado"
 import { Insignia } from "./insignia"
-
-/** Decisiones de crédito: su motivo es información de crédito (PER-1). */
-const DE_CREDITO = new Set(["aprobado", "rechazado", "info_pedida"])
 
 /** Historial de actividad: quién hizo qué y cuándo. Los eventos del Sistema son reglas. */
 export function HistorialPedido({ pedido, horizontal = false }: { pedido: Pedido; horizontal?: boolean }) {

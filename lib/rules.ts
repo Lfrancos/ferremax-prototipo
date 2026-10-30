@@ -616,6 +616,37 @@ export const RESPUESTA_WHATSAPP = regla({
   },
 })
 
+/** Lo que dispara un correo. Cada motivo es una línea del registro de actividad (lib/actividad.ts), salvo el fuera de plazo, que sale del aviso de NOT-1. */
+export type MotivoCorreo = "carga" | "sap" | "fuera_de_plazo" | "regla" | "seguir" | "reporte"
+
+export const CORREOS = regla({
+  id: "NOT-3",
+  titulo: "Quién recibe correo y cuándo",
+  texto:
+    "El correo no reemplaza al WhatsApp: deja constancia y lleva los archivos. Les llega a Marcela y Sandra cuando se guarda una carga de SAP (con las filas apartadas) y cuando se descarga el archivo para SAP (adjunto). Cuando un pedido se pasa del plazo, Andrés recibe copia del aviso. Cuando alguien cambia una regla, le llega al dueño del documento. Cualquiera puede seguir un pedido: desde ese momento le llega un correo por cada cosa que le pase, menos lo que hizo él mismo. Quien no ve información de crédito (PER-1) recibe el correo sin el motivo.",
+  fuente: "Pedido del prototipo",
+  documento: DOCUMENTOS.avisos,
+  seccion: "Correo",
+  momentos: [1, 3, 5],
+  /** A quién le llega. `dueno`: el del documento de la regla. `para`: el aviso que se copia, o a quién se manda el reporte. */
+  fn(motivo: MotivoCorreo, ctx: { dueno?: Persona | null; para?: Persona[]; seguidores?: Persona[]; quien?: string } = {}): Persona[] {
+    const sin = (lista: Persona[]) => [...new Set(lista)].filter((p) => p !== ctx.quien)
+    switch (motivo) {
+      case "carga":
+      case "sap":
+        return ["Marcela Ríos", "Sandra Beltrán"]
+      case "fuera_de_plazo":
+        return [...new Set<Persona>([...(ctx.para ?? []), "Andrés Molina"])]
+      case "regla":
+        return [ctx.dueno ?? DOCUMENTOS.sistema.dueno]
+      case "seguir":
+        return sin(ctx.seguidores ?? [])
+      case "reporte":
+        return ctx.para ?? []
+    }
+  },
+})
+
 // ── Momento 4 · Pasar a bodega ──────────────────────────────────────────────────
 
 export const ENTRADA_A_LA_FILA = regla({
@@ -1123,6 +1154,36 @@ export const FIRMAR_PEDIDO = regla({
   }),
 })
 
+/** Las únicas herramientas que tienen los agentes (lib/agentes). Ninguna aprueba, rechaza, cambia un dato ni manda un mensaje. */
+export const HERRAMIENTAS_DE_CLAUDE = [
+  "consultar_cliente",
+  "consultar_cartera",
+  "pedidos_anteriores",
+  "reglas_del_pedido",
+  "casos_parecidos",
+  "entregar_nota",
+  "buscar_remision",
+  "reglas_de_evidencia",
+  "entregar_lectura",
+  "indicadores_semana",
+  "pedidos_de_la_semana",
+  "bodega_y_transporte",
+  "cambios_de_reglas",
+  "entregar_reporte",
+]
+
+export const LO_QUE_HACE_CLAUDE = regla({
+  id: "PER-9",
+  titulo: "Lo que puede hacer Claude",
+  texto:
+    "Claude consulta y redacta: prepara la nota de contexto de la ficha, lee las fotos de la entrega y arma el reporte del lunes. Solo tiene herramientas para leer (el cliente, la cartera, los pedidos, las reglas, los casos resueltos, la remisión) y una para entregar lo que escribió. No tiene con qué aprobar, rechazar, cambiar un dato ni mandar un mensaje: esas herramientas no existen. Cada vez que trabaja queda en el registro de actividad, con quién se lo pidió.",
+  fuente: "Permiso del prototipo",
+  documento: DOCUMENTOS.prototipo,
+  seccion: "Claude",
+  momentos: [2, 6],
+  fn: (herramienta: string) => HERRAMIENTAS_DE_CLAUDE.includes(herramienta),
+})
+
 /** Todas las reglas, para /reglas y para el diálogo de cada regla. */
 export const REGLAS: Regla[] = [
   SALDO_PENDIENTE,
@@ -1137,6 +1198,7 @@ export const REGLAS: Regla[] = [
   RELOJ_APROBACION,
   AVISO_WHATSAPP,
   RESPUESTA_WHATSAPP,
+  CORREOS,
   FUERA_DE_REGLA,
   NINGUNA_REGLA_CUBRE,
   MOTIVO_ESCRITO,
@@ -1164,6 +1226,7 @@ export const REGLAS: Regla[] = [
   IMPORTAR_SOLICITUDES,
   CREAR_SOLICITUD,
   IMPORTAR_CARTERA,
+  LO_QUE_HACE_CLAUDE,
 ] as Regla[]
 
 export const reglaPorId = (id: string) => REGLAS.find((r) => r.id === id)

@@ -6,6 +6,7 @@ import {
   BellRingIcon,
   BookOpenIcon,
   CalendarCheckIcon,
+  HistoryIcon,
   InboxIcon,
   LayoutDashboardIcon,
   ListOrderedIcon,
@@ -48,6 +49,7 @@ const SEGUIMIENTO: ItemNav[] = [
   { titulo: "Alertas", url: "/alertas", icono: <BellRingIcon /> },
   { titulo: "Avisos por WhatsApp", url: "/avisos", icono: <MessageCircleIcon /> },
   { titulo: "Revisión del lunes", url: "/revision", icono: <CalendarCheckIcon /> },
+  { titulo: "Registro de actividad", url: "/actividad", icono: <HistoryIcon /> },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

@@ -2,8 +2,8 @@
 
 Prototipo **no funcional** para mostrar a los mentores del curso 30X hacia dónde va el curso: una herramienta pequeña que cuida el pedido a crédito desde la solicitud hasta la salida de bodega, con topes de tiempo.
 
-- Sin backend, sin base de datos, sin autenticación y sin llamadas a APIs ni a LLMs.
-- Datos ficticios en un solo archivo. Las acciones solo cambian el estado local. Nada sale a WhatsApp de verdad. Al recargar todo vuelve a empezar; también se reinicia con "Reiniciar demo" en el sidebar.
+- Sin base de datos y sin autenticación. Lo único que corre en el servidor son tres **agentes de Claude** (`app/api/agentes`); sin clave de API corren en **modo ensayo**, con las mismas herramientas y un texto de plantilla.
+- Datos ficticios en un solo archivo. Las acciones solo cambian el estado local. Nada sale a WhatsApp ni por correo de verdad. Al recargar todo vuelve a empezar; también se reinicia con "Reiniciar demo" en el sidebar.
 - Interfaz en español de Colombia, en tema claro y oscuro.
 - Base visual: el bloque `dashboard-01` de shadcn/ui (sidebar, tarjetas, gráfico y tabla), con los colores y la tipografía del Sistema de diseño de Ferremax.
 
@@ -16,9 +16,17 @@ npm run dev
 
 Abre http://localhost:3000. Si el puerto está ocupado, Next usa el siguiente (3001, …) y lo dice en la consola.
 
+Para que los agentes llamen a Claude de verdad, crea `.env.local` en la raíz con tu clave y reinicia `npm run dev`:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Sin ese archivo todo funciona igual en modo ensayo. `.env.local` está en `.gitignore`: la clave nunca se sube al repositorio ni llega al navegador.
+
 ## Mapa de pantallas
 
-El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Tablero de pedidos y los cuatro pasos del pedido: **1 · Cargar pedidos**, **2 · Aprobar** con la cuenta de lo que espera decisión, **3 · Bodega**, **4 · Transporte**) · **Seguimiento** (Alertas, **Avisos por WhatsApp**, Revisión del lunes) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
+El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (Nuevo cliente, Clientes, Cartera) · **Pedidos** (Tablero de pedidos y los cuatro pasos del pedido: **1 · Cargar pedidos**, **2 · Aprobar** con la cuenta de lo que espera decisión, **3 · Bodega**, **4 · Transporte**) · **Seguimiento** (Alertas, **Avisos por WhatsApp**, Revisión del lunes, **Registro de actividad**) · **Reglas**. La pantalla en la que estás se marca con fondo negro y texto amarillo.
 
 | Ruta | Momento | Qué muestra |
 |---|---|---|
@@ -28,14 +36,15 @@ El menú lateral va por secciones: **Cómo funciona** (aparte) · **Clientes** (
 | `/` | Todos | Tablero: 5 tarjetas (incluye **En camino**) que **filtran la tabla** al pulsarlas (Por aprobar, Cerca del tope, Fuera de tope, En camino; "% a tiempo" abre la revisión), un gráfico de pedidos abiertos por día y la tabla de pedidos con pestañas por tramo (Aprobar, Alistar y despachar, **En camino**, Cerrados) y por tope (Cerca del tope, Fuera de tope), con una columna **Tiempo total**. Cada fila tiene una flecha que despliega su historial y el botón **Aprobar** cuando la regla deja firmar al rol. |
 | `/clientes` | 1 | Base de clientes (maestro de SAP). Sandra crea clientes; Nelson y los vendedores ven solo los nombres. |
 | `/cartera` | 1, 2, 5 | Informe de cartera: el corte vigente, cuándo cruza cada cliente los 30 días de atraso, los pagos sin aplicar, el importador del corte de SAP con vista previa de lo que cambia, y las partidas abiertas. |
-| `/pedidos/[id]` | 1 a 8 | Quién aprueba y por qué, ficha de cinco líneas, nota de contexto (propuesta IA), firma, paso a bodega, historial y, desde que sale de bodega, **5 · Transporte y entrega**: lo cargado contra lo pedido, el conductor, las fotos que llegaron y lo que leyó Claude. |
+| `/pedidos/[id]` | 1 a 8 | Quién aprueba y por qué, ficha de cinco líneas, **nota de contexto** que prepara el agente (botón **Preparar con el agente**, con el recorrido), firma, paso a bodega, historial, el botón **Seguir por correo** y, desde que sale de bodega, **5 · Transporte y entrega**: lo cargado contra lo pedido, el conductor, las fotos que llegaron y lo que leyó Claude. |
 | `/bodega` (menú: **3 · Bodega**) | 4 y 7 | Paso 3: lista de alistamiento de mañana (vista de Nelson), en el orden de la regla y con fecha límite. Cada fila tiene el botón **Entregar a transporte** (solo Nelson). |
-| `/transporte` (menú: **4 · Transporte**) | 7 y 8 | Paso 4: qué va en camino, qué salió incompleto, qué entregas tienen alerta y cuáles están confirmadas. Las dos opciones para que llegue la evidencia (chat de WhatsApp o enlace por entrega), con una simulación de lo que manda el conductor. |
+| `/transporte` (menú: **4 · Transporte**) | 7 y 8 | Paso 4: qué va en camino, qué salió incompleto, qué entregas tienen alerta y cuáles están confirmadas. Las dos opciones para que llegue la evidencia (chat de WhatsApp o enlace por entrega), con una simulación de lo que manda el conductor. Cada mensaje con fotos trae la lectura de muestra y el botón **Leer con Claude** (el agente que lee las fotos). |
 | `/remisiones/[id]` | 4, 7 y 8 | La remisión de un pedido como se vería, las fotos firmadas que subió el conductor y **qué pasó con ella**: cuándo la generó SAP, cuándo entró a la lista, quién la entregó a transporte, cuándo llegó la foto firmada y qué leyó Claude. Se llega desde la ficha, el tablero (fila desplegada), Bodega y Transporte. |
 | `/facturas/[id]` | Después de 8 | La factura como se vería y **qué pasó con ella**: quién la emitió, firma electrónica, DIAN, envío, acuse del cliente, corte de cartera y vencimiento. Se llega desde la ficha, el tablero y `/cartera`. |
 | `/avisos` | 1, 3 y 5 | **Avisos por WhatsApp (simulados).** Cuándo avisa el sistema (al entrar y cada 6 h), qué pedidos esperan decisión y cuándo les toca el próximo aviso, con un **reloj de ensayo** (+1 h, +6 h, +12 h) para ver los recordatorios. Un celular simulado por aprobador (Andrés, Marcela, Sandra) donde se responde `1 Aprobar`, `2 Rechazar` o `3 Info` más el motivo, y la decisión queda en el pedido. |
 | `/alertas` | 5 | Rutina diaria: qué está cerca del tope o fuera de tope en cada tramo, el tramo En camino (sin confirmar, evidencia con alerta, salidas incompletas) y borradores de aviso (propuesta IA). |
-| `/revision` | 6 | Revisión del lunes: A, B, C, % a tiempo, fuera de tope por tramo, listas y resumen narrativo (propuesta IA). |
+| `/revision` | 6 | Revisión del lunes: arriba el **Reporte de la semana** (botón **Hacer reporte**: el agente escribe el resumen, lo que salió bien, lo que preocupa, ideas de lo que se podría agregar y preguntas; luego **Mandar por correo**). Debajo, A, B, C, % a tiempo, fuera de tope por tramo y las listas. |
+| `/actividad` (menú: **Registro de actividad**) | Todos | Todo lo que pasó, junto y en orden, para auditar: quién hizo qué y cuándo, con filtros por tipo, persona y pedido, y descarga en CSV. La pestaña **Correos** muestra cada correo que habría salido, a quién, por qué regla y con qué adjunto. |
 | `/reglas` | Todos | Las reglas con una pestaña por área: **Todas** (agrupadas por área) o solo una (Crédito, Bodega, Transporte, Proyecto, Sistema), con su dueño. |
 
 **Cualquier insignia "■ Regla" se puede pulsar.** Abre un diálogo con la regla en palabras, su área, su documento y sección, sus números, dónde actúa, quién la puede editar y el historial de cambios.
@@ -175,9 +184,74 @@ Lo que ya está escrito y se reutiliza igual, sin React ni estado: `lib/rules.ts
 | El celular simulado de `/avisos` | El evento de mensaje recibido de Baileys: se acepta solo de los celulares registrados, el mensaje citado dice de qué pedido es y se lee con `resolverRespuesta` |
 | Los tres CSV se leen y revisan en el navegador y la base vive en memoria (`lib/carga`) | El mismo código en un script o ruta del servidor, contra tablas reales: `INSERT` de lo nuevo, `UPDATE` con fila de historia, y el archivo original guardado |
 | El archivo para SAP se descarga y se pasa a mano (`lib/exportar-sap.ts`) | El mismo archivo, que SAP lee con un programa de carga, o la liberación directa por integración. Los lotes, en una tabla `exportaciones` |
+| El registro de actividad vive en memoria (`lib/actividad.ts`) | Tabla `actividad` que solo admite agregar, escrita en la misma transacción que cada cambio (ver *Para producción · Correo y registro de actividad*) |
+| Los correos se recalculan del registro (`lib/correos.ts`) | El mismo `correosDe` alimenta una cola de salida; el proveedor de correo [por definir] los manda y se guarda su id |
+| Los agentes reciben del navegador los datos del pedido | Cada herramienta consulta la base directamente; la ruta solo recibe el id del pedido y el usuario |
 | `HOY` fijo | La hora real |
 
 Baileys no es una API oficial de WhatsApp (funciona como WhatsApp Web) y Meta puede bloquear un número que lo use; la alternativa oficial es WhatsApp Business. Es una decisión para los mentores.
+
+## Agentes: dónde trabaja Claude
+
+Tres agentes, uno por lugar del flujo donde alguien tiene que **juntar información de varias partes** antes de decidir. Ninguno decide: investigan y redactan. Lo dice la regla `PER-9 · Lo que puede hacer Claude`, y lo garantiza el código, porque **no existe ninguna herramienta para aprobar, rechazar, cambiar un dato ni mandar un mensaje**.
+
+| Agente | Dónde | Qué entrega | Herramientas (solo leen) |
+|---|---|---|---|
+| **Preparar la decisión** (`lib/agentes/ficha.ts`) | Ficha del pedido, bloque *Nota de contexto* (paso 2 · Aprobar) | 2 a 4 frases con lo que no se ve en la ficha, qué mirar antes de firmar y qué dato falta | `consultar_cliente`, `consultar_cartera`, `pedidos_anteriores`, `reglas_del_pedido`, `casos_parecidos` |
+| **Leer las fotos de la entrega** (`lib/agentes/fotos.ts`) | Cada mensaje de la transportadora con fotos (paso 4 · Transporte y la ficha) | Lo que lee en las fotos: bultos, remisión, quien recibe, firma, novedad, si es de este pedido y qué revisar | `buscar_remision`, `reglas_de_evidencia` |
+| **Reporte del lunes** (`lib/agentes/reporte.ts`) | Revisión del lunes, bloque *Reporte de la semana* | Resumen, lo que salió bien, lo que preocupa, de 2 a 4 **ideas de lo que se podría agregar o cambiar** (cada una con su dato y quién la decide) y preguntas para la reunión | `indicadores_semana`, `pedidos_de_la_semana`, `bodega_y_transporte`, `cambios_de_reglas` |
+
+Cada agente tiene además una **herramienta de entrega** (`entregar_nota`, `entregar_lectura`, `entregar_reporte`) con un esquema estricto: cuando la llama, terminó, y lo que escribió ahí es lo que se muestra.
+
+**Cómo funciona un agente** (`lib/agentes/bucle.ts`, unas 50 líneas, el mismo ciclo para los tres):
+
+1. Se le manda a Claude lo que se le pide, sus herramientas y lo que ya pasó.
+2. Claude piensa y responde. Si pide herramientas (`stop_reason: "tool_use"`), **la app las ejecuta** y le devuelve el resultado. Vuelve al paso 1.
+3. Cuando llama a la herramienta de entrega, terminó.
+
+Un agente no es más que eso: un modelo, unas herramientas y un ciclo. Lo que lo vuelve agente, y no una sola llamada, es que **Claude decide qué consultar según lo que va encontrando**. Por ejemplo, el lector de fotos solo busca la remisión si alcanza a leer un número, y así descubre si el conductor mandó la de otro pedido.
+
+**Cómo mostrarlo en clase:**
+1. Abre un pedido por aprobar (por ejemplo `PED-2026-03101`), baja a **Nota de contexto** y pulsa **Preparar con el agente**. Se ve cada vuelta en vivo: lo que piensa, cada herramienta que pide, con qué datos y qué le devolvió la app.
+2. Abre **Cómo llegó a la nota** y muestra `lib/agentes/bucle.ts` al lado: cada paso de la pantalla es una vuelta del `for`.
+3. Muestra `lib/agentes/ficha.ts`: las herramientas son funciones que ya existían en `lib/vistas.ts` y `lib/rules.ts`. **Las herramientas son los permisos del agente.**
+4. En **4 · Transporte**, pulsa **Leer con Claude** en el mensaje de un documento de otra remisión o borroso (usa *Simular chat* con esos escenarios). Claude ve la imagen, no la descripción.
+5. En la **Revisión del lunes**, pulsa **Hacer reporte** y luego **Mandar por correo**. La IA redacta y la persona decide si lo manda.
+6. En **Registro de actividad**, filtra por *Claude*: cada vez que trabajó quedó una línea con quién se lo pidió.
+
+**Modelo y modo ensayo.** Usa `claude-opus-5-5` con el SDK oficial (`@anthropic-ai/sdk`) desde una ruta del servidor (`app/api/agentes/*/route.ts`), así que la clave nunca llega al navegador. La ruta manda cada paso apenas pasa (una línea JSON por paso) y la pantalla los pinta en vivo. Sin `ANTHROPIC_API_KEY`, la ruta corre el **modo ensayo**: las mismas herramientas con los mismos datos, y lo que "piensa" y entrega es un texto de plantilla (la nota de `lib/propuestas.ts`, la lectura de muestra y el resumen narrativo de antes). Sirve para ensayar sin conexión y sin costo, y la pantalla siempre dice en qué modo corrió.
+
+**Por qué ahí y no en otro lado.** Donde una regla ya resuelve (quién aprueba, la lista de bodega, cuándo avisar), no hace falta un agente: la regla es más barata, siempre da lo mismo y se puede auditar. El agente entra donde hay que **leer** (una foto, una cartera, una semana entera) y **redactar** para una persona.
+
+## Registro de actividad y correos
+
+**Registro de actividad** (`/actividad`, `lib/actividad.ts`). Cada acción de la app deja una línea: quién, qué, cuándo, de qué pedido y el detalle. Eso incluye cada evento de un pedido (también los que llegan por WhatsApp o desde SAP), cada carga, cada archivo para SAP, cada cambio de regla, cada mensaje de WhatsApp y de la transportadora, quién sigue un pedido, cada vez que trabajó Claude y cada correo mandado a mano. Las líneas solo se agregan y van numeradas: el número da el orden, porque en la demo la hora está fija. Las demás pantallas siguen mostrando cada cosa por separado (el historial en la ficha, las cargas en *1 · Cargar pedidos*, los lotes en *2 · Aprobar*, el chat en *Avisos*); el registro las junta para auditar. El motivo de una decisión de crédito sale oculto para Nelson y los vendedores (`PER-1`), igual que en la ficha.
+
+**Correos** (`/actividad` › Correos, `lib/correos.ts`, regla `NOT-3`). No hay una lista de correos guardada: salen del registro. Cada línea dice qué pasó y `NOT-3` dice quién debe enterarse. El correo no reemplaza al WhatsApp: deja constancia y lleva los archivos.
+
+| Cuándo | A quién | Adjunto |
+|---|---|---|
+| Se guarda una carga de SAP | Marcela y Sandra | Las filas apartadas, si hay |
+| Se descarga el archivo para SAP | Marcela y Sandra | El archivo para SAP |
+| Un pedido se pasa del plazo (`NOT-1`) | Copia del aviso a quien lo recibió y a Andrés | — |
+| Alguien cambia una regla | El dueño del documento | — |
+| Alguien manda el reporte del lunes | Andrés, Marcela y Nelson | — |
+| Pasa algo en un pedido que alguien **sigue** | Cada persona que lo sigue, menos quien hizo el cambio | — |
+
+**Seguir un pedido.** En la ficha, el botón **Seguir por correo** apunta al rol actual: desde ese momento le llega un correo por cada cosa que le pase al pedido, menos lo que haga él mismo. A quien no ve información de crédito (`PER-1`) le llega el correo sin el motivo. Para probarlo: como **Édinson Rojas** (vendedor) sigue un pedido por aprobar; cambia a **Andrés** o a quien lo apruebe y apruébalo; en **Registro de actividad › Correos**, elige *Bandeja de Édinson Rojas*.
+
+### Para producción · Correo y registro de actividad
+
+Lo que hay que revisar en la auditoría antes de pasar a un stack de producción:
+
+- **Tabla `actividad`, solo para agregar.** Columnas: `id` (secuencia), `fecha` (hora del servidor, con zona), `quien` (usuario autenticado o "Sistema", "Claude", "Transportadora"), `tipo`, `que`, `id_pedido`, `detalle`, `credito` (bool), `ref`, `origen` (app, WhatsApp, SAP, carga). Sin `UPDATE` ni `DELETE` para el usuario de la app (permiso de la base, no solo del código). Si hay que corregir algo, se agrega otra línea.
+- **Quién escribe.** Cada acción guarda su cambio y su línea de actividad **en la misma transacción**: nunca hay un cambio sin línea ni una línea sin cambio. En el prototipo eso lo hace el reductor del almacén (`lineasDe` en `lib/store.tsx`).
+- **Correos con cola de salida (outbox).** Un proceso lee las líneas nuevas, llama a `correosDe` (el mismo de `lib/correos.ts`) y guarda cada correo en `correos_salida`: `id`, `id_actividad`, `para`, `asunto`, `cuerpo`, `adjunto`, `estado` (pendiente, enviado, rebotado), `intentos`, `id_proveedor` y `enviado_at`. Así un correo no se manda dos veces y se puede auditar qué salió, a quién y por qué línea.
+- **Proveedor de correo [por definir].** El correo de Ferremax (Microsoft 365 o Google Workspace) o un servicio de envío. Hace falta un remitente propio (`pedidos@ferremax.co` es de muestra) con SPF, DKIM y DMARC configurados para que no llegue a spam.
+- **Seguir un pedido.** Tabla `seguimientos` (`id_pedido`, `usuario`, `desde`, `hasta`), y cada alta y baja también como línea de actividad. Cada correo lleva un enlace para dejar de seguir.
+- **Privacidad.** El cuerpo se arma según quién lo recibe (`PER-1`): a un vendedor no le llega el motivo de crédito. Los adjuntos con información de crédito solo van a Marcela y Sandra.
+- **Retención y acceso [por definir].** Cuánto tiempo se guarda el registro, quién lo puede ver completo (¿Andrés y Marcela?) y si se exporta a un lugar fuera de la app.
+- **Lo que hace Claude, también.** Cada corrida de un agente queda con quién la pidió, el modelo, las herramientas que llamó y lo que entregó. En producción: tabla `corridas_ia` con la traza completa y los tokens, para auditar y para medir el costo.
 
 ## Cómo está armado
 
@@ -192,6 +266,10 @@ lib/exportar-sap.ts  De vuelta a SAP: las decisiones de la app en el formato de 
 lib/importar.ts    Lectura simple de CSV y descarga, para el importador de cartera
 lib/importar-cartera.ts  Corte de cartera: columnas, lectura y revisión de las partidas abiertas
 lib/notificaciones.ts  Avisos por WhatsApp: a quién, cuándo, qué texto y cómo se lee la respuesta (sin enviar nada)
+lib/actividad.ts   Registro de actividad: una línea por cada cosa que pasa, solo se agrega
+lib/correos.ts     Correos: salen del registro con la regla NOT-3 (sin enviar nada)
+lib/agentes/       Los tres agentes: agente.ts (la forma), bucle.ts (el ciclo con el SDK, solo servidor), responder.ts (la ruta y el modo ensayo), ficha.ts, fotos.ts, reporte.ts, imagen.ts (foto a PNG) y tipos.ts
+app/api/agentes/   Una ruta POST por agente: ficha, fotos y reporte
 lib/lineas.ts      Detalle de las líneas de cada pedido (producto y cantidad pedida) para comparar con lo cargado
 lib/evidencia.ts   Mensajes de la transportadora: conductores, lectura de las fotos (IA de muestra), asociación al pedido y escenarios
 lib/documentos.ts  Historia de la remisión y de la factura de un pedido (qué pasó, cuándo, quién)
@@ -220,7 +298,7 @@ components/        Bloque dashboard-01 adaptado (sidebar, tarjetas, gráfico, ta
 
 ### Librerías
 
-Next.js (App Router), TypeScript, Tailwind y shadcn/ui. El bloque `dashboard-01` trajo `@tanstack/react-table` (la tabla), `recharts` (los charts de shadcn), `next-themes` y `sonner` (tema y avisos). Se quitaron `@dnd-kit` y `zod`, que el bloque usaba para arrastrar filas.
+Next.js (App Router), TypeScript, Tailwind y shadcn/ui. El bloque `dashboard-01` trajo `@tanstack/react-table` (la tabla), `recharts` (los charts de shadcn), `next-themes` y `sonner` (tema y avisos). Se quitaron `@dnd-kit` y `zod`, que el bloque usaba para arrastrar filas. Los agentes usan `@anthropic-ai/sdk`, el SDK oficial de Anthropic, solo en el servidor.
 
 ## Lo que quedó "[por definir]"
 
@@ -279,6 +357,12 @@ Ningún documento lo dice, así que el prototipo no lo inventa:
 51. **Paso a SAP · rechazos:** qué hace SAP con un pedido rechazado en la app: ¿se cancela o se queda bloqueado? El archivo dice "Rechazado", un valor que el archivo de aprobaciones de SAP no traía (traía "Sin aprobar (cancelado)").
 52. **Paso a SAP · confirmación:** hoy la app no revisa que SAP haya recibido lo exportado. La siguiente carga de pedidos trae la aprobación y quién aprobó; con eso se podría marcar cada pedido como "confirmado en SAP" y avisar de lo exportado que SAP no tiene después de X horas.
 53. **Dos numeraciones:** `/como-funciona` cuenta 8 *momentos* (los del método del curso) y el menú cuenta 4 *pasos*. Falta decidir si se deja una sola.
+54. **Correo · proveedor y remitente:** con qué se manda (el correo de Ferremax o un servicio de envío), desde qué dirección y quién la administra.
+55. **Correo · quién puede seguir un pedido:** el prototipo deja seguir a cualquier rol. ¿Puede seguirlo alguien de fuera (el residente de la obra, el cliente)? Si sí, qué le llega y qué no.
+56. **Registro · retención y acceso:** cuánto tiempo se guarda y quién lo ve completo.
+57. **Agentes · datos que salen a Anthropic:** la nota de contexto manda a la API los datos de crédito del cliente, y el lector, las fotos de la remisión con el nombre de quien recibe. Hay que confirmar con Ferremax que eso está bien y con qué condiciones de retención.
+58. **Agentes · costo y cuándo correr:** hoy solo corren cuando alguien pulsa el botón. ¿La nota se prepara sola al entrar cada pedido? ¿El lector lee cada foto al llegar? Cada corrida tiene un costo en tokens que la pantalla ya muestra.
+59. **Agentes · reglas editadas:** si alguien cambia un número de una regla en `/reglas`, el servidor usa el número del documento, no el editado, porque los cambios viven en el navegador. Pasa solo en el prototipo: en producción las reglas estarían en la base.
 
 ## Supuestos de la demo
 

@@ -54,11 +54,11 @@ export const MOMENTOS: Momento[] = [
   {
     n: 2,
     titulo: "Preparar la decisión",
-    hace: "Arma la ficha: cliente, valor, cupo autorizado y disponible, saldo vencido, atraso, antigüedad y la condición que pide revisión.",
-    tipos: ["regla", "propuesta"],
-    tipoTexto: "Regla + propuesta IA",
+    hace: "Arma la ficha: cliente, valor, cupo autorizado y disponible, saldo vencido, atraso, antigüedad y la condición que pide revisión. Un agente consulta el cliente, la cartera, los pedidos anteriores y los casos parecidos, y escribe la nota de contexto.",
+    tipos: ["regla", "ia"],
+    tipoTexto: "Regla + agente IA",
     decide: "Quien aprueba",
-    reglas: ["CRED-2.6"],
+    reglas: ["CRED-2.6", "PER-9"],
     pantalla: { href: "/pedidos/PED-2026-03103", nombre: "Ficha del pedido" },
   },
   {
@@ -94,11 +94,11 @@ export const MOMENTOS: Momento[] = [
   {
     n: 6,
     titulo: "Revisar la semana",
-    hace: "Cada lunes: indicadores A, B y C, fuera de tope por tramo y lista para escalar.",
-    tipos: ["regla", "propuesta"],
-    tipoTexto: "Reporte + propuesta IA",
+    hace: "Cada lunes: indicadores A, B y C, fuera de tope por tramo y lista para escalar. Un agente arma el reporte de la semana y propone ideas de lo que se podría agregar o cambiar.",
+    tipos: ["regla", "ia"],
+    tipoTexto: "Reporte + agente IA",
     decide: "Marcela, Andrés y Nelson",
-    reglas: ["REV-A"],
+    reglas: ["REV-A", "PER-9"],
     pantalla: { href: "/revision", nombre: "Revisión" },
   },
   {
@@ -114,11 +114,11 @@ export const MOMENTOS: Momento[] = [
   {
     n: 8,
     titulo: "Confirmar la entrega",
-    hace: "La transportadora manda la foto del producto y del documento firmado. Claude las lee y levanta una alerta si falta algo.",
-    tipos: ["regla", "propuesta"],
-    tipoTexto: "Regla + propuesta IA",
+    hace: "La transportadora manda la foto del producto y del documento firmado. Un agente lee las fotos y busca la remisión; la regla levanta una alerta si falta algo.",
+    tipos: ["regla", "ia"],
+    tipoTexto: "Regla + agente IA",
     decide: "Nelson y Marcela",
-    reglas: ["TRA-3", "TRA-4"],
+    reglas: ["TRA-3", "TRA-4", "PER-9"],
     pantalla: { href: "/transporte", nombre: "Transporte" },
   },
 ]

@@ -1,18 +1,37 @@
 "use client"
 
 import { createContext, useContext, useMemo, useReducer, useState, type ReactNode } from "react"
+import {
+  actividadInicial,
+  deAsociacion,
+  deCambioRegla,
+  deCarga,
+  deCliente,
+  deCorte,
+  deLote,
+  deMensajeSinPedido,
+  deSeguimiento,
+  deWhatsApp,
+  eventosNuevos,
+  numerar,
+  seguidoresDe,
+  type Actividad,
+  type NuevaActividad,
+} from "./actividad"
+import type { Corrida } from "./agentes/tipos"
 import type { ResultadoCarga } from "./carga/aplicar"
 import { CARGA_MANUAL, baseInicial, clienteDeFila, filaDeCliente, type Base } from "./carga/base"
+import { correosDe, type Correo } from "./correos"
 import { CARTERA_INICIAL, CLIENTES, HOY, MENSAJES_INICIALES, PEDIDOS, ULTIMA_EXPORTACION } from "./data"
 import { describirMensaje, pedidoDelMensaje } from "./evidencia"
 import { decisionesParaSAP, exportacionInicial, pendientesDeExportar, siguienteLote, type DecisionSAP, type Exportacion } from "./exportar-sap"
 import { cambiarNumero, numeroDe, restaurarNumeros } from "./rules"
 import type {
+  CambioRegla,
   Cliente,
   CorteCartera,
   Despacho,
   Evento,
-  FechaHora,
   MensajeTransporte,
   MensajeWhatsApp,
   Pedido,
@@ -25,17 +44,10 @@ import { esperanEvidencia, estadoDeEventos, tramoDe, unirPedidos } from "./vista
 // agrega: eventos a un pedido, solicitudes nuevas, clientes nuevos, mensajes de la transportadora
 // y cambios de números de una regla. Los clientes viven en la base de la carga (lib/carga): la app los lee de ahí.
 // Los pedidos que ven las pantallas se arman uniendo pedido + cliente: no hay copias.
+// Cada acción deja además su línea en el registro de actividad (lib/actividad.ts); de ahí salen los correos.
 // Al recargar la página (o con "Reiniciar demo") todo vuelve a empezar.
 
-export interface CambioRegla {
-  regla: string
-  clave: string
-  antes: number
-  despues: number
-  quien: Persona
-  fecha: FechaHora
-  motivo: string
-}
+export type { CambioRegla }
 
 interface Datos {
   registros: PedidoRegistro[]
@@ -47,30 +59,42 @@ interface Datos {
   cambios: CambioRegla[]
   /** Los archivos que se han sacado para SAP con las decisiones de la app (lib/exportar-sap). */
   exportaciones: Exportacion[]
+  /** Todo lo que pasó, en orden. Solo se agrega. */
+  actividad: Actividad[]
+  /** Lo último que hizo cada agente, por clave ("ficha:PED-…", "fotos:MSG-…", "reporte:semana"). */
+  corridas: Record<string, Corrida>
 }
 
 type Accion =
   | { tipo: "registrar"; id: string; evento: Evento }
   | { tipo: "despachar"; id: string; evento: Evento; despacho: Despacho }
   | { tipo: "mensaje"; mensaje: MensajeTransporte }
-  | { tipo: "asociarMensaje"; id: string; id_pedido: string }
+  | { tipo: "asociarMensaje"; id: string; id_pedido: string; quien: Persona }
   | { tipo: "whatsapp"; mensajes: MensajeWhatsApp[] }
-  | { tipo: "agregarCliente"; cliente: Cliente }
+  | { tipo: "agregarCliente"; cliente: Cliente; quien: Persona }
   | { tipo: "cargar"; resultado: ResultadoCarga }
   | { tipo: "agregarPedidos"; registros: PedidoRegistro[] }
   | { tipo: "reemplazarCartera"; cartera: CorteCartera }
   | { tipo: "cambioRegla"; cambio: CambioRegla }
   | { tipo: "exportar"; exportacion: Exportacion }
+  | { tipo: "seguir"; id_pedido: string; persona: Persona; sigue: boolean }
+  | { tipo: "corrida"; corrida: Corrida; linea: NuevaActividad }
+  | { tipo: "correo"; linea: NuevaActividad }
   | { tipo: "reiniciar" }
+
+const BASE_INICIAL = baseInicial(CLIENTES)
+const LOTE_INICIAL = exportacionInicial(PEDIDOS, ULTIMA_EXPORTACION)
 
 const INICIO: Datos = {
   registros: PEDIDOS,
-  base: baseInicial(CLIENTES),
+  base: BASE_INICIAL,
   cartera: CARTERA_INICIAL,
   mensajes: MENSAJES_INICIALES,
   whatsapp: [],
   cambios: [],
-  exportaciones: [exportacionInicial(PEDIDOS, ULTIMA_EXPORTACION)],
+  exportaciones: [LOTE_INICIAL],
+  actividad: actividadInicial(PEDIDOS, BASE_INICIAL.cargas, [LOTE_INICIAL], MENSAJES_INICIALES),
+  corridas: {},
 }
 
 /** Un mensaje asociado a un pedido que va en camino lo da por entregado y deja su constancia en el historial. */
@@ -84,7 +108,47 @@ function conMensaje(registros: PedidoRegistro[], m: MensajeTransporte): PedidoRe
   })
 }
 
+/** Las líneas del registro que deja cada acción. Lo que se agregó a un pedido sale de comparar sus eventos antes y después. */
+function lineasDe(d: Datos, r: Datos, a: Accion): NuevaActividad[] {
+  switch (a.tipo) {
+    case "registrar":
+    case "despachar":
+    case "agregarPedidos":
+      return eventosNuevos(d.registros, r.registros)
+    case "mensaje":
+      return a.mensaje.id_pedido ? eventosNuevos(d.registros, r.registros) : [deMensajeSinPedido(a.mensaje)]
+    case "asociarMensaje":
+      return [deAsociacion(r.mensajes.find((m) => m.id === a.id)!, a.quien), ...eventosNuevos(d.registros, r.registros)]
+    case "whatsapp":
+      return a.mensajes.map(deWhatsApp)
+    case "agregarCliente":
+      return [deCliente(a.cliente, a.quien, HOY)]
+    case "cargar":
+      // Una línea por carga: lo que trajo cada pedido queda en su propio historial (origen SAP).
+      return [deCarga(a.resultado.carga)]
+    case "reemplazarCartera":
+      return [deCorte(a.cartera)]
+    case "cambioRegla":
+      return [deCambioRegla(a.cambio)]
+    case "exportar":
+      return [deLote(a.exportacion)]
+    case "seguir":
+      return [deSeguimiento(a.id_pedido, a.persona, a.sigue, HOY)]
+    case "corrida":
+    case "correo":
+      return [a.linea]
+    case "reiniciar":
+      return []
+  }
+}
+
 function reducir(d: Datos, a: Accion): Datos {
+  const r = cambiar(d, a)
+  if (a.tipo === "reiniciar") return r
+  return { ...r, actividad: [...d.actividad, ...numerar(lineasDe(d, r, a), d.actividad.length)] }
+}
+
+function cambiar(d: Datos, a: Accion): Datos {
   switch (a.tipo) {
     case "registrar":
       return {
@@ -138,6 +202,12 @@ function reducir(d: Datos, a: Accion): Datos {
       return { ...d, cambios: [...d.cambios, a.cambio] }
     case "exportar":
       return { ...d, exportaciones: [...d.exportaciones, a.exportacion] }
+    case "corrida":
+      return { ...d, corridas: { ...d.corridas, [a.corrida.clave]: a.corrida } }
+    case "seguir":
+    case "correo":
+      // Solo dejan su línea en el registro.
+      return d
     case "reiniciar":
       return INICIO
   }
@@ -164,6 +234,20 @@ interface Prototipo {
   porExportar: DecisionSAP[]
   /** Arma un lote con lo pendiente y lo devuelve, para descargarlo. */
   exportarASAP: () => { lote: Exportacion; decisiones: DecisionSAP[] }
+  /** El registro de actividad completo, del más viejo al más nuevo. */
+  actividad: Actividad[]
+  /** Los correos que habría mandado el sistema (lib/correos.ts), del más viejo al más nuevo. */
+  correos: Correo[]
+  /** Quiénes siguen un pedido por correo. */
+  seguidores: (id_pedido: string) => Persona[]
+  /** El rol actual empieza o deja de seguir un pedido. */
+  seguir: (id_pedido: string, sigue: boolean) => void
+  /** Lo último que hizo un agente sobre una clave. */
+  corridas: Record<string, Corrida>
+  /** Guarda lo que hizo un agente y deja la línea en el registro. */
+  guardarCorrida: (corrida: Corrida, que: string, id_pedido?: string) => void
+  /** Una persona manda un correo desde la app (el reporte del lunes). Queda en el registro y en los correos. */
+  enviarCorreo: (correo: { para: Persona[]; asunto: string; cuerpo: string[] }) => void
   registrar: (id: string, evento: Evento) => void
   /** Nelson entrega el pedido a transporte: queda el registro de lo cargado y el evento que cierra el reloj de bodega. */
   despachar: (id: string, despacho: Despacho, evento: Evento) => void
@@ -202,8 +286,30 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
     [datos.registros, clientes, datos.cartera, datos.mensajes, datos.cambios],
   )
   const porExportar = useMemo(() => pendientesDeExportar(decisionesParaSAP(datos.registros), datos.exportaciones), [datos.registros, datos.exportaciones])
+  const correos = useMemo(() => correosDe(datos.actividad, pedidos), [datos.actividad, pedidos])
 
   const valor: Prototipo = {
+    actividad: datos.actividad,
+    correos,
+    seguidores: (id) => seguidoresDe(datos.actividad, id),
+    seguir: (id_pedido, sigue) => dispatch({ tipo: "seguir", id_pedido, persona: rol, sigue }),
+    corridas: datos.corridas,
+    guardarCorrida: (corrida, que, id_pedido) =>
+      dispatch({
+        tipo: "corrida",
+        corrida,
+        linea: {
+          fecha: corrida.fecha,
+          quien: "Claude",
+          tipo: "ia",
+          que,
+          detalle: `Lo pidió ${corrida.pidio} · ${corrida.vueltas} ${corrida.vueltas === 1 ? "vuelta" : "vueltas"} · ${corrida.pasos.filter((p) => p.tipo === "herramienta").length} herramientas · ${corrida.modo === "claude" ? corrida.modelo : "modo ensayo"}`,
+          id_pedido,
+          ref: corrida.clave,
+        },
+      }),
+    enviarCorreo: (correo) =>
+      dispatch({ tipo: "correo", linea: { fecha: HOY, quien: rol, tipo: "correo", que: `Mandó por correo «${correo.asunto}»`, detalle: `Para ${correo.para.join(", ")}`, correo } }),
     pedidos,
     clientes,
     base: datos.base,
@@ -228,13 +334,13 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
       dispatch({ tipo: "mensaje", mensaje: { ...resto, id, id_pedido } })
       return { id, id_pedido }
     },
-    asociarMensaje: (id, id_pedido) => dispatch({ tipo: "asociarMensaje", id, id_pedido }),
+    asociarMensaje: (id, id_pedido) => dispatch({ tipo: "asociarMensaje", id, id_pedido, quien: rol }),
     escribirWhatsApp: (nuevos) =>
       dispatch({
         tipo: "whatsapp",
         mensajes: nuevos.map((m, i) => ({ ...m, id: `WA-${String(datos.whatsapp.length + i + 1).padStart(3, "0")}` })),
       }),
-    agregarCliente: (cliente) => dispatch({ tipo: "agregarCliente", cliente }),
+    agregarCliente: (cliente) => dispatch({ tipo: "agregarCliente", cliente, quien: rol }),
     agregarPedidos: (registros) => dispatch({ tipo: "agregarPedidos", registros }),
     cargar: (resultado) => dispatch({ tipo: "cargar", resultado }),
     editarRegla: (regla, clave, nuevo, motivo) => {

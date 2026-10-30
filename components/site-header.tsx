@@ -20,6 +20,7 @@ const TITULOS: [string, string][] = [
   ["/alertas", "Alertas"],
   ["/avisos", "Avisos por WhatsApp"],
   ["/revision", "Revisión del lunes"],
+  ["/actividad", "Registro de actividad"],
   ["/reglas", "Reglas"],
 ]
 

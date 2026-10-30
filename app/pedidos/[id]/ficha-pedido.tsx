@@ -1,6 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import { BellIcon, BellOffIcon } from "lucide-react"
+import { toast } from "sonner"
+import { CabeceraCorrida, ComoLoHizo, HerramientasDelAgente, Traza, useAgente } from "@/components/ferremax/agente"
 import { EnlacesDocumentos } from "@/components/ferremax/enlaces-documentos"
 import { BotonEntregar } from "@/components/ferremax/entregar"
 import { EntregaDelPedido } from "@/components/ferremax/entrega-pedido"
@@ -10,10 +13,12 @@ import { TiempoTotalPedido } from "@/components/ferremax/tiempo-total"
 import { PanelFirma, usePermisoFirma } from "@/components/ferremax/firmar"
 import { HistorialPedido } from "@/components/ferremax/historial"
 import { ReglaBoton } from "@/components/ferremax/insignia"
-import { Bloque, NotaPropuesta, Titulo } from "@/components/ferremax/piezas"
+import { Bloque, Titulo } from "@/components/ferremax/piezas"
+import { Button } from "@/components/ui/button"
+import { agenteFicha, type ContextoFicha } from "@/lib/agentes/ficha"
+import type { NotaFicha } from "@/lib/agentes/tipos"
 import { fmtDia, fmtFechaHora } from "@/lib/fechas"
 import { fmtCOP } from "@/lib/formato"
-import { notaDeContexto } from "@/lib/propuestas"
 import {
   ASIGNAR_APROBADOR,
   CHEQUEOS,
@@ -21,6 +26,7 @@ import {
   FECHA_LIMITE,
   FICHA,
   FIRMAR_PEDIDO,
+  LO_QUE_HACE_CLAUDE,
   SALDO_VENCIDO,
   REMISION_SIN_FIRMA,
   VER_INFO_CREDITO,
@@ -61,6 +67,7 @@ export function FichaPedido({ id }: { id: string }) {
             <p className="etiqueta mb-1 text-muted-foreground">Reloj de aprobación</p>
             <Semaforo reloj={relojAprobacion(p)} />
           </div>
+          <SeguirPedido pedido={p} />
         </div>
       </Titulo>
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
@@ -194,19 +201,108 @@ function Ficha({ pedido }: { pedido: Pedido }) {
   )
 }
 
+/** La nota de contexto la prepara el agente de lib/agentes/ficha.ts. Investiga y redacta; no aprueba (PER-9). */
 function NotaContexto({ pedido, pedidos }: { pedido: Pedido; pedidos: Pedido[] }) {
-  const n = notaDeContexto(pedido, pedidos)
+  const { clientes, cartera } = usePrototipo()
+  const agente = useAgente("ficha", pedido.id_pedido)
+  const contexto: ContextoFicha = {
+    pedido,
+    cliente: clientes.find((c) => c.id_cliente === pedido.id_cliente) ?? null,
+    otros: pedidos.filter((o) => o.id_cliente === pedido.id_cliente && o.id_pedido !== pedido.id_pedido),
+    partidas: cartera.partidas.filter((x) => x.id_cliente === pedido.id_cliente),
+    corte: cartera.corte,
+  }
+  const { herramientas, entrega } = agenteFicha(contexto)
+  const c = agente.corrida
+  const nota = c?.resultado as NotaFicha | null | undefined
+
   return (
-    <Bloque titulo="Nota de contexto" tipos={["propuesta"]}>
-      <NotaPropuesta />
-      <ul className="flex list-disc flex-col gap-2 pl-5 text-[15px]">
-        {n.lineas.map((l) => (
-          <li key={l}>{l}</li>
-        ))}
-        <li className="text-muted-foreground">{n.falta}</li>
-      </ul>
-      <p className="mt-4 text-sm text-muted-foreground">Pregunta para mentores: ¿qué contexto ayuda a decidir sin cambiar quién decide?</p>
+    <Bloque
+      titulo="Nota de contexto"
+      tipos={["ia", "regla"]}
+      reglas={[LO_QUE_HACE_CLAUDE.id]}
+      accion={
+        <Button variant={c ? "outline" : "default"} disabled={agente.corriendo} onClick={() => agente.correr(contexto, "Preparó la nota de contexto", pedido.id_pedido)}>
+          {agente.corriendo ? "Preparando…" : c ? "Volver a preparar" : "Preparar con el agente"}
+        </Button>
+      }
+      pie="Claude consulta y redacta. No tiene herramientas para aprobar, rechazar ni cambiar datos: la firma es de una persona."
+    >
+      {agente.vivo ? (
+        <Traza pasos={agente.vivo.pasos} entrega={entrega} enVivo />
+      ) : c ? (
+        <>
+          <CabeceraCorrida corrida={c} />
+          {nota ? (
+            <div className="mt-4 flex flex-col gap-4 text-[15px]">
+              <ul className="flex list-disc flex-col gap-2 pl-5">
+                {nota.nota.map((l) => (
+                  <li key={l}>{l}</li>
+                ))}
+              </ul>
+              {nota.mirar.length > 0 && (
+                <div>
+                  <p className="etiqueta mb-1 text-grafito">Antes de firmar, mirar</p>
+                  <ul className="flex list-disc flex-col gap-1 pl-5">
+                    {nota.mirar.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {nota.falta.length > 0 && (
+                <div>
+                  <p className="etiqueta mb-1 text-grafito">Falta</p>
+                  <ul className="flex list-disc flex-col gap-1 pl-5 text-muted-foreground">
+                    {nota.falta.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="mt-3 text-[15px] text-vencido">Terminó sin entregar la nota. Revisa el recorrido.</p>
+          )}
+          <ComoLoHizo corrida={c} entrega={entrega} titulo="Cómo llegó a la nota" />
+        </>
+      ) : (
+        <>
+          <p className="text-[15px]">
+            El agente consulta lo que haya del cliente y escribe una nota corta con lo que no se ve a simple vista en la ficha: qué mirar antes de firmar y qué dato falta.
+          </p>
+          <p className="etiqueta mt-4 mb-2 text-grafito">Lo que puede consultar</p>
+          <HerramientasDelAgente herramientas={herramientas} entrega={entrega} />
+        </>
+      )}
+      {agente.error && <p className="mt-3 text-[15px] text-vencido">No se pudo: {agente.error}</p>}
     </Bloque>
+  )
+}
+
+/** Seguir el pedido por correo (NOT-3): desde ahora le llega un correo al rol actual por cada cosa que le pase. */
+function SeguirPedido({ pedido }: { pedido: Pedido }) {
+  const { seguidores, seguir, rol } = usePrototipo()
+  const lista = seguidores(pedido.id_pedido)
+  const sigo = lista.includes(rol)
+  return (
+    <div className="text-right">
+      <p className="etiqueta mb-1 text-muted-foreground">Correo</p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          seguir(pedido.id_pedido, !sigo)
+          toast.success(sigo ? `Dejaste de seguir ${pedido.id_pedido}` : `Sigues ${pedido.id_pedido}`, {
+            description: sigo ? undefined : "Te llega un correo por cada cosa que le pase. Los ves en Registro de actividad › Correos.",
+          })
+        }}
+      >
+        {sigo ? <BellOffIcon /> : <BellIcon />}
+        {sigo ? "Dejar de seguir" : "Seguir por correo"}
+      </Button>
+      <p className="mt-1 text-xs text-muted-foreground">{lista.length ? `Lo siguen: ${lista.join(", ")}` : "Nadie lo sigue"}</p>
+    </div>
   )
 }
 

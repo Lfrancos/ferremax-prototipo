@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { esperanEvidencia } from "@/lib/vistas"
 import { FotoDelDocumento, FotoDelProducto } from "./foto"
 import { Insignia } from "./insignia"
+import { LeerConClaude } from "./leer-fotos"
 
 type Marca = "ok" | "mal" | "nada"
 
@@ -39,7 +40,7 @@ export function LecturaDeClaude({ mensaje, remisionEsperada }: { mensaje: Mensaj
   return (
     <div className="border-2 border-dashed border-grafito p-3">
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <span className="etiqueta">Lo que leyó Claude</span>
+        <span className="etiqueta">Lectura de muestra</span>
         <Insignia tipo="propuesta" />
       </div>
       <ul className="divide-y divide-linea">
@@ -78,7 +79,7 @@ export function LecturaDeClaude({ mensaje, remisionEsperada }: { mensaje: Mensaj
         )}
       </ul>
       <p className="mt-2 text-xs text-grafito">
-        Texto de muestra armado con plantillas sobre la misma descripción de la foto. En la versión real lo lee Claude.
+        Armada con plantillas sobre la misma descripción de la foto, al instante y sin costo. Es la que usan las alertas. Debajo, Claude lee la imagen de verdad.
       </p>
     </div>
   )
@@ -177,7 +178,10 @@ export function MensajeTarjeta({ mensaje, compacto = false }: { mensaje: Mensaje
           )}
           <Asociacion mensaje={mensaje} />
         </div>
-        <LecturaDeClaude mensaje={mensaje} remisionEsperada={esperada} />
+        <div className="flex flex-col gap-3">
+          <LecturaDeClaude mensaje={mensaje} remisionEsperada={esperada} />
+          {(mensaje.producto || mensaje.documento) && <LeerConClaude mensaje={mensaje} />}
+        </div>
       </div>
     </article>
   )
