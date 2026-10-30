@@ -1,6 +1,8 @@
 "use client"
 
 import { createContext, useContext, useMemo, useReducer, useState, type ReactNode } from "react"
+import type { ResultadoCarga } from "./carga/aplicar"
+import { CARGA_MANUAL, baseInicial, clienteDeFila, filaDeCliente, type Base } from "./carga/base"
 import { CARTERA_INICIAL, CLIENTES, HOY, MENSAJES_INICIALES, PEDIDOS } from "./data"
 import { describirMensaje, pedidoDelMensaje } from "./evidencia"
 import { cambiarNumero, numeroDe, restaurarNumeros } from "./rules"
@@ -20,7 +22,7 @@ import { esperanEvidencia, estadoDeEventos, tramoDe, unirPedidos } from "./vista
 
 // Estado local de la sesión. Arranca con CLIENTES, PEDIDOS y MENSAJES de lib/data.ts y solo
 // agrega: eventos a un pedido, solicitudes nuevas, clientes nuevos, mensajes de la transportadora
-// y cambios de números de una regla.
+// y cambios de números de una regla. Los clientes viven en la base de la carga (lib/carga): la app los lee de ahí.
 // Los pedidos que ven las pantallas se arman uniendo pedido + cliente: no hay copias.
 // Al recargar la página (o con "Reiniciar demo") todo vuelve a empezar.
 
@@ -36,7 +38,8 @@ export interface CambioRegla {
 
 interface Datos {
   registros: PedidoRegistro[]
-  clientes: Cliente[]
+  /** Todo lo que se ha cargado con los archivos CSV, fila por fila (lib/carga). De aquí salen los clientes. */
+  base: Base
   cartera: CorteCartera
   mensajes: MensajeTransporte[]
   whatsapp: MensajeWhatsApp[]
@@ -50,12 +53,13 @@ type Accion =
   | { tipo: "asociarMensaje"; id: string; id_pedido: string }
   | { tipo: "whatsapp"; mensajes: MensajeWhatsApp[] }
   | { tipo: "agregarCliente"; cliente: Cliente }
+  | { tipo: "cargar"; resultado: ResultadoCarga }
   | { tipo: "agregarPedidos"; registros: PedidoRegistro[] }
   | { tipo: "reemplazarCartera"; cartera: CorteCartera }
   | { tipo: "cambioRegla"; cambio: CambioRegla }
   | { tipo: "reiniciar" }
 
-const INICIO: Datos = { registros: PEDIDOS, clientes: CLIENTES, cartera: CARTERA_INICIAL, mensajes: MENSAJES_INICIALES, whatsapp: [], cambios: [] }
+const INICIO: Datos = { registros: PEDIDOS, base: baseInicial(CLIENTES), cartera: CARTERA_INICIAL, mensajes: MENSAJES_INICIALES, whatsapp: [], cambios: [] }
 
 /** Un mensaje asociado a un pedido que va en camino lo da por entregado y deja su constancia en el historial. */
 function conMensaje(registros: PedidoRegistro[], m: MensajeTransporte): PedidoRegistro[] {
@@ -96,7 +100,24 @@ function reducir(d: Datos, a: Accion): Datos {
     case "whatsapp":
       return { ...d, whatsapp: [...d.whatsapp, ...a.mensajes] }
     case "agregarCliente":
-      return { ...d, clientes: [...d.clientes, a.cliente] }
+      return {
+        ...d,
+        base: { ...d.base, tablas: { ...d.base.tablas, clientes: { ...d.base.tablas.clientes, [a.cliente.id_cliente]: filaDeCliente(a.cliente, CARGA_MANUAL) } } },
+      }
+    case "cargar": {
+      const { base, registros, decididos, corte } = a.resultado
+      // Un pago sin aplicar no viene en el archivo de cartera: se conserva el del corte anterior.
+      const conservadas = d.cartera.partidas.filter((p) => p.tipo !== "Factura")
+      return {
+        ...d,
+        base,
+        registros: [...d.registros, ...registros].map((r) => {
+          const eventos = decididos.filter((x) => x.id_pedido === r.id_pedido).map((x) => x.evento)
+          return eventos.length ? { ...r, eventos: [...r.eventos, ...eventos] } : r
+        }),
+        cartera: corte ? { ...corte, partidas: [...corte.partidas, ...conservadas] } : d.cartera,
+      }
+    }
     case "agregarPedidos":
       return { ...d, registros: [...d.registros, ...a.registros] }
     case "reemplazarCartera":
@@ -114,6 +135,8 @@ export type MensajeNuevo = Omit<MensajeTransporte, "id" | "id_pedido"> & { id_pe
 interface Prototipo {
   pedidos: Pedido[]
   clientes: Cliente[]
+  /** La base de la carga: las cuatro tablas, el historial de cada fila y las cargas hechas. */
+  base: Base
   /** Último corte de partidas abiertas: de aquí salen saldo y atraso. */
   cartera: CorteCartera
   /** Todo lo que ha escrito la transportadora, también lo que todavía no se asocia a un pedido. */
@@ -130,8 +153,10 @@ interface Prototipo {
   /** Agrega mensajes al chat de WhatsApp. El id y el orden los pone el almacén. */
   escribirWhatsApp: (mensajes: Omit<MensajeWhatsApp, "id">[]) => void
   agregarCliente: (cliente: Cliente) => void
-  /** Solicitudes nuevas: importadas de SAP o creadas en la app. */
+  /** Solicitudes nuevas creadas en la app. */
   agregarPedidos: (registros: PedidoRegistro[]) => void
+  /** Guarda una carga de archivos: la base, las solicitudes nuevas, las decisiones que SAP ya traía y el corte de cartera. */
+  cargar: (resultado: ResultadoCarga) => void
   /** Un corte nuevo reemplaza al anterior: saldos y atrasos se recalculan. */
   reemplazarCartera: (cartera: CorteCartera) => void
   editarRegla: (regla: string, clave: string, valor: number, motivo: string) => void
@@ -150,15 +175,17 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
   const [reglaAbierta, abrirRegla] = useState<string | null>(null)
 
   // Los cambios de reglas también recalculan: por eso `cambios` entra en la dependencia.
+  const clientes = useMemo(() => Object.values(datos.base.tablas.clientes).map(clienteDeFila), [datos.base.tablas.clientes])
   const pedidos = useMemo(
-    () => unirPedidos(datos.registros, datos.clientes, datos.cartera, datos.mensajes),
+    () => unirPedidos(datos.registros, clientes, datos.cartera, datos.mensajes),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [datos.registros, datos.clientes, datos.cartera, datos.mensajes, datos.cambios],
+    [datos.registros, clientes, datos.cartera, datos.mensajes, datos.cambios],
   )
 
   const valor: Prototipo = {
     pedidos,
-    clientes: datos.clientes,
+    clientes,
+    base: datos.base,
     cartera: datos.cartera,
     mensajes: datos.mensajes,
     whatsapp: datos.whatsapp,
@@ -181,6 +208,7 @@ export function ProveedorPrototipo({ children }: { children: ReactNode }) {
       }),
     agregarCliente: (cliente) => dispatch({ tipo: "agregarCliente", cliente }),
     agregarPedidos: (registros) => dispatch({ tipo: "agregarPedidos", registros }),
+    cargar: (resultado) => dispatch({ tipo: "cargar", resultado }),
     editarRegla: (regla, clave, nuevo, motivo) => {
       const antes = numeroDe(regla, clave)
       cambiarNumero(regla, clave, nuevo)

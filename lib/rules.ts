@@ -1048,9 +1048,9 @@ export const IMPORTAR_CARTERA = regla({
 
 export const IMPORTAR_SOLICITUDES = regla({
   id: "PER-5",
-  titulo: "Quién importa las solicitudes de SAP",
+  titulo: "Quién carga los archivos de SAP",
   texto:
-    "Opción A (satélite). Cada mañana Marcela Ríos o Sandra Beltrán descargan de SAP el archivo de solicitudes y lo importan. Una solicitud que ya está en la app no se vuelve a importar.",
+    "Cada mañana Marcela Ríos o Sandra Beltrán descargan de SAP los archivos (clientes, pedidos, aprobaciones y cartera), los revisan y los guardan. Cualquiera puede revisar un archivo; solo ellas dos guardan la carga. Lo que ya está en la base no se duplica: si cambió algo, se actualiza y se guarda la versión anterior.",
   fuente: "Permiso del prototipo",
   documento: DOCUMENTOS.prototipo,
   seccion: "Llega la solicitud",

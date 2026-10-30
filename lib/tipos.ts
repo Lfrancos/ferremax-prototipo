@@ -38,7 +38,7 @@ export interface Evento {
   /** En "evidencia_recibida": el mensaje de la transportadora al que corresponde. */
   ref?: string
   /** Por dónde se dio la decisión, si no fue en la app. */
-  via?: "WhatsApp"
+  via?: "WhatsApp" | "SAP"
 }
 
 /**
